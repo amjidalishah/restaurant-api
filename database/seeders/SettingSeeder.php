@@ -58,7 +58,7 @@ class SettingSeeder extends Seeder
             ],
             [
                 'key' => 'currency',
-                'value' => 'USD',
+                'value' => 'PHP',
                 'type' => 'string',
                 'description' => 'Currency code',
             ],

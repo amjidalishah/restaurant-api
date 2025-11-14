@@ -155,7 +155,7 @@ class SettingController extends Controller
             'website' => Setting::getValue('website', ''),
             'tax_rate' => Setting::getValue('tax_rate', 10),
             'delivery_fee' => Setting::getValue('delivery_fee', 5),
-            'currency' => Setting::getValue('currency', 'USD'),
+            'currency' => Setting::getValue('currency', 'PHP'),
             'receipt_footer' => Setting::getValue('receipt_footer', ''),
             'print_header' => Setting::getValue('print_header', true),
             'print_footer' => Setting::getValue('print_footer', true),

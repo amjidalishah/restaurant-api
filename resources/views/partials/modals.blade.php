@@ -53,11 +53,7 @@
                                 <input type="number" x-model="settings.taxRate" min="0" max="100" step="0.1" required
                                        class="w-full border rounded-lg px-3 py-2">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1" x-text="translations.deliveryFee"></label>
-                                <input type="number" x-model="settings.deliveryFee" min="0" step="0.01" required
-                                       class="w-full border rounded-lg px-3 py-2">
-                            </div>
+                            
                             <div>
                                 <label class="block text-sm font-medium mb-1" x-text="translations.currency"></label>
                                 <select x-model="settings.currency" class="w-full border rounded-lg px-3 py-2">

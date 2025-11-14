@@ -46,7 +46,7 @@ export const createSettingsModule = (state) => ({
         return {
             taxRate: 10,
             deliveryFee: 5,
-            currency: 'USD',
+            currency: 'PHP',
             restaurantName: 'Restaurant Manager',
             address: '123 Main Street, City, State 12345',
             phone: '+1 (555) 123-4567',

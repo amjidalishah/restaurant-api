@@ -1039,7 +1039,7 @@ export const createAppState = () => ({
         return {
             taxRate: 10,
             deliveryFee: 5,
-            currency: 'USD',
+            currency: 'PHP',
             restaurantName: 'Restaurant Manager',
             address: '123 Main Street, City, State 12345',
             phone: '+1 (555) 123-4567',
@@ -1232,10 +1232,20 @@ export const createAppState = () => ({
 
     // Format price with currency
     formatPrice(price) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(price);
+        const currency = (this.settings && this.settings.currency) ? this.settings.currency : 'PHP';
+        const locale = this.language === 'ar'
+            ? 'ar-PH'
+            : (currency === 'PHP' ? 'en-PH' : (navigator.language || 'en-US'));
+
+        try {
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency
+            }).format(price ?? 0);
+        } catch (error) {
+            console.warn('Intl currency formatting failed, falling back to PHP format:', error);
+            return `₱${Number(price ?? 0).toFixed(2)}`;
+        }
     },
 
     // Format date and time
