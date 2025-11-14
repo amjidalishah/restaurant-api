@@ -157,12 +157,12 @@
                         <i class="fas fa-box mr-2"></i>
                         <span x-text="translations.takeaway"></span>
                     </button>
-                    <button @click="orderType = 'delivery'; currentOrder.tableNumber = null"
+                    <!-- <button @click="orderType = 'delivery'; currentOrder.tableNumber = null"
                             class="px-4 py-2 rounded-lg border transition-all duration-200"
                             :class="{'bg-primary text-white border-primary shadow-md': orderType === 'delivery', 'bg-white border-gray-300 hover:bg-gray-50': orderType !== 'delivery'}">
                         <i class="fas fa-truck mr-2"></i>
                         <span x-text="translations.delivery"></span>
-                    </button>
+                    </button> -->
                 </div>
 
                 <!-- Table Selection for Dine-in -->
