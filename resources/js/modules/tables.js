@@ -1,0 +1,376 @@
+// js/tables.js
+// Table management module for Alpine.js
+
+import api from './api.js';
+
+const formatDateTimeLocal = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (num) => String(num).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const buildTableFormState = (table = {}) => ({
+    id: table.id ?? null,
+    number: table.number ?? '',
+    capacity: table.capacity ?? 4,
+    status: table.status ?? 'available',
+    location: table.location ?? '',
+    notes: table.notes ?? '',
+    customerName: table.customer_name ?? table.customerName ?? '',
+    customerPhone: table.customer_phone ?? table.customerPhone ?? '',
+    reservationTime: formatDateTimeLocal(table.reservation_time ?? table.reservationTime),
+});
+
+const toApiPayload = (form) => ({
+    number: form.number,
+    capacity: form.capacity,
+    status: form.status,
+    location: form.location || null,
+    notes: form.notes || null,
+    customer_name: form.status === 'reserved' ? form.customerName || null : null,
+    customer_phone: form.status === 'reserved' ? form.customerPhone || null : null,
+    reservation_time: form.status === 'reserved' ? (form.reservationTime ? new Date(form.reservationTime).toISOString() : null) : null,
+});
+
+export const createTablesModule = () => ({
+    addTable() {
+        this.editingTable = null;
+        this.tableForm = buildTableFormState({ number: (this.tables?.length || 0) + 1 });
+        this.showTableForm = true;
+    },
+
+    editTable(table) {
+        this.editingTable = table;
+        this.tableForm = buildTableFormState(table);
+        this.showTableForm = true;
+    },
+
+    openReservationForm(table) {
+        this.editingTable = table;
+        this.tableForm = {
+            ...buildTableFormState(table),
+            status: 'reserved',
+        };
+        if (!this.tableForm.reservationTime) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 30);
+            this.tableForm.reservationTime = formatDateTimeLocal(now.toISOString());
+        }
+        this.showTableForm = true;
+    },
+
+    async saveTable() {
+        try {
+            const payload = toApiPayload(this.tableForm);
+            let response;
+
+            if (this.editingTable) {
+                response = await api.updateTable(this.tableForm.id, payload);
+            } else {
+                response = await api.createTable(payload);
+            }
+
+            if (response.success) {
+                const updatedTable = response.data?.data ?? response.data;
+
+                if (this.editingTable) {
+                    const index = this.tables.findIndex(t => t.id === updatedTable.id);
+                    if (index !== -1) {
+                        this.tables.splice(index, 1, updatedTable);
+                    }
+                } else {
+                    this.tables.push(updatedTable);
+                }
+
+                localStorage.setItem('restaurant_tables', JSON.stringify(this.tables));
+
+                this.showTableForm = false;
+                this.editingTable = null;
+                this.resetTableForm();
+            } else {
+                alert('Error saving table: ' + (response.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error saving table:', error);
+            alert(error.message || 'Error saving table. Please try again.');
+        }
+    },
+
+    async deleteTable(id) {
+        if (confirm('Are you sure you want to delete this table?')) {
+            try {
+                const response = await api.deleteTable(id);
+                if (response.success) {
+                    this.tables = this.tables.filter(table => table.id !== id);
+                    localStorage.setItem('restaurant_tables', JSON.stringify(this.tables));
+                } else {
+                    alert('Error deleting table: ' + (response.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting table:', error);
+                alert('Error deleting table. Please try again.');
+            }
+        }
+    },
+
+    resetTableForm() {
+        this.tableForm = buildTableFormState();
+    },
+
+    selectTable(tableNumber) {
+        this.currentOrder.tableNumber = tableNumber;
+        this.selectedTable = tableNumber;
+    },
+
+    async makeReservation(tableId) {
+        console.warn('makeReservation is deprecated. Use openReservationForm instead.', tableId);
+    },
+
+    async cancelReservation(tableId) {
+        try {
+            const response = await api.request('patch', `/tables/${tableId}/cancel-reservation`);
+
+            if (response.success) {
+                const updatedTable = response.data?.data ?? response.data;
+                const index = this.tables.findIndex(t => t.id === updatedTable.id);
+                if (index !== -1) {
+                    this.tables.splice(index, 1, updatedTable);
+                }
+                localStorage.setItem('restaurant_tables', JSON.stringify(this.tables));
+            } else {
+                alert(response.message || 'Unable to cancel reservation.');
+            }
+        } catch (error) {
+            console.error('Error canceling reservation:', error);
+            alert(error.message || 'Error canceling reservation.');
+        }
+    },
+
+    getTableRevenue(tableNumber) {
+        const tableOrders = this.orders.filter(order =>
+            order.tableNumber === tableNumber && order.status === 'completed'
+        );
+        return tableOrders.reduce((sum, order) => sum + order.total, 0);
+    },
+
+    getTableAverageOrder(tableNumber) {
+        const tableOrders = this.orders.filter(order =>
+            order.tableNumber === tableNumber && order.status === 'completed'
+        );
+        if (tableOrders.length === 0) return 0;
+        const totalRevenue = tableOrders.reduce((sum, order) => sum + order.total, 0);
+        return totalRevenue / tableOrders.length;
+    },
+
+    getTableOccupancyTime(tableNumber) {
+        const tableOrders = this.orders.filter(order =>
+            order.tableNumber === tableNumber
+        );
+        if (tableOrders.length === 0) return 0;
+
+        const firstOrder = tableOrders.reduce((earliest, order) =>
+            order.timestamp < earliest.timestamp ? order : earliest
+        );
+        const lastOrder = tableOrders.reduce((latest, order) =>
+            order.timestamp > latest.timestamp ? order : latest
+        );
+
+        return Math.round((lastOrder.timestamp - firstOrder.timestamp) / (1000 * 60));
+    },
+
+    getTableOrders(tableNumber) {
+        return this.orders.filter(order =>
+            order.tableNumber === tableNumber &&
+            ['new', 'preparing', 'ready'].includes(order.status)
+        );
+    },
+
+    async closeTable(tableNumber) {
+        try {
+            const response = await api.request('patch', `/tables/${tableNumber}/close`);
+
+            if (response.success) {
+                this.orders = this.orders.filter(order => order.tableNumber !== tableNumber);
+                localStorage.setItem('restaurant_orders', JSON.stringify(this.orders));
+
+                const table = this.tables.find(t => t.number === tableNumber);
+                if (table) {
+                    table.status = 'available';
+                    localStorage.setItem('restaurant_tables', JSON.stringify(this.tables));
+                }
+
+                if (this.currentOrder.tableNumber === tableNumber) {
+                    this.currentOrder = {
+                        items: [],
+                        subtotal: 0,
+                        tax: 0,
+                        total: 0,
+                        tableNumber: null,
+                        deliveryFee: 0
+                    };
+                }
+            }
+        } catch (error) {
+            console.error('Error closing table:', error);
+        }
+    },
+
+    getTableStatusColor(status) {
+        switch (status) {
+            case 'available': return 'bg-green-100 text-green-800';
+            case 'occupied': return 'bg-red-100 text-red-800';
+            case 'reserved': return 'bg-yellow-100 text-yellow-800';
+            case 'cleaning': return 'bg-blue-100 text-blue-800';
+            case 'maintenance': return 'bg-purple-100 text-purple-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    },
+
+    // Table analytics and statistics
+    getTableStats(tableNumber) {
+        const tableOrders = this.orders.filter(order =>
+            order.tableNumber === tableNumber
+        );
+
+        const completedOrders = tableOrders.filter(order => order.status === 'completed');
+        const totalRevenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
+        const averageOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+
+        return {
+            totalOrders: tableOrders.length,
+            completedOrders: completedOrders.length,
+            totalRevenue: totalRevenue,
+            averageOrderValue: averageOrderValue,
+            occupancyTime: this.getTableOccupancyTime(tableNumber)
+        };
+    },
+
+    // Table filtering and search
+    getFilteredTables() {
+        let filteredTables = [...this.tables];
+
+        // Filter by status
+        const statusFilter = document.getElementById('tableStatusFilter')?.value;
+        if (statusFilter && statusFilter !== 'all') {
+            filteredTables = filteredTables.filter(table => table.status === statusFilter);
+        }
+
+        // Filter by location
+        const locationFilter = document.getElementById('tableLocationFilter')?.value;
+        if (locationFilter && locationFilter !== 'all') {
+            filteredTables = filteredTables.filter(table => table.location === locationFilter);
+        }
+
+        // Search by table number or notes
+        const searchTerm = document.getElementById('tableSearch')?.value;
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            filteredTables = filteredTables.filter(table =>
+                table.number.toString().includes(searchLower) ||
+                (table.notes && table.notes.toLowerCase().includes(searchLower)) ||
+                (table.location && table.location.toLowerCase().includes(searchLower))
+            );
+        }
+
+        // Sort by table number
+        filteredTables.sort((a, b) => a.number - b.number);
+
+        return filteredTables;
+    },
+
+    // Table locations
+    getTableLocations() {
+        const locations = [...new Set(this.tables.map(table => table.location).filter(Boolean))];
+        return locations.sort();
+    },
+
+    // Available tables for selection
+    getAvailableTables() {
+        return this.tables.filter(table =>
+            table.status === 'available' || table.status === 'cleaning'
+        ).sort((a, b) => a.number - b.number);
+    },
+
+    // Table capacity groups
+    getTablesByCapacity() {
+        const capacityGroups = {};
+        this.tables.forEach(table => {
+            if (!capacityGroups[table.capacity]) {
+                capacityGroups[table.capacity] = [];
+            }
+            capacityGroups[table.capacity].push(table);
+        });
+        return capacityGroups;
+    },
+
+    // Table status summary
+    getTableStatusSummary() {
+        const summary = {
+            available: 0,
+            occupied: 0,
+            reserved: 0,
+            cleaning: 0,
+            maintenance: 0
+        };
+
+        this.tables.forEach(table => {
+            if (summary.hasOwnProperty(table.status)) {
+                summary[table.status]++;
+            }
+        });
+
+        return summary;
+    },
+
+    // Table utilization rate
+    getTableUtilizationRate() {
+        const totalTables = this.tables.length;
+        if (totalTables === 0) return 0;
+
+        const occupiedTables = this.tables.filter(table =>
+            table.status === 'occupied'
+        ).length;
+
+        return Math.round((occupiedTables / totalTables) * 100);
+    },
+
+    // Table turnover time (average time a table is occupied)
+    getAverageTableTurnoverTime() {
+        const completedOrders = this.orders.filter(order =>
+            order.status === 'completed' && order.tableNumber
+        );
+
+        if (completedOrders.length === 0) return 0;
+
+        let totalTime = 0;
+        let tableCount = 0;
+
+        // Group orders by table and calculate average time
+        const tableOrders = {};
+        completedOrders.forEach(order => {
+            if (!tableOrders[order.tableNumber]) {
+                tableOrders[order.tableNumber] = [];
+            }
+            tableOrders[order.tableNumber].push(order);
+        });
+
+        Object.values(tableOrders).forEach(orders => {
+            if (orders.length > 1) {
+                const firstOrder = orders.reduce((earliest, order) =>
+                    order.timestamp < earliest.timestamp ? order : earliest
+                );
+                const lastOrder = orders.reduce((latest, order) =>
+                    order.timestamp > latest.timestamp ? order : latest
+                );
+
+                const timeDiff = (lastOrder.timestamp - firstOrder.timestamp) / (1000 * 60); // minutes
+                totalTime += timeDiff;
+                tableCount++;
+            }
+        });
+
+        return tableCount > 0 ? Math.round(totalTime / tableCount) : 0;
+    }
+}); 

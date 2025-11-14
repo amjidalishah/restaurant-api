@@ -1,0 +1,34 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function (Request $request) {
+    if ($request->user()) {
+        return redirect()->route('pos');
+    }
+
+    return view('welcome');
+})->name('home');
+
+Route::middleware('auth')->group(function () {
+    Route::view('/pos', 'pos')->middleware('role:admin|cashier')->name('pos');
+    Route::view('/kds', 'kds')->middleware('role:admin|kitchen')->name('kds');
+    Route::view('/recipes', 'recipes')->middleware('role:admin|kitchen')->name('recipes');
+    Route::view('/tables', 'tables')->middleware('role:admin')->name('tables');
+    Route::view('/reports', 'reports')->middleware('role:admin')->name('reports');
+    Route::view('/inventory', 'inventory')->middleware('role:admin|inventory')->name('inventory');
+
+    Route::view('/dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    // Admin-only routes will go here.
+});
+
+require __DIR__.'/auth.php';
