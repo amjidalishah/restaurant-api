@@ -3,6 +3,35 @@
 
 import api from './api.js';
 
+const recipeCategoriesMeta = document.head.querySelector('meta[name="recipe-categories"]')?.getAttribute('content');
+let defaultRecipeCategories = [
+    'Coffee',
+    'Frappe',
+    'Dairy Drinks',
+    'Matcha Series',
+    'Soda Refreshers',
+    'Short Order',
+    'Silog',
+    'Pasta & Noodles',
+    'Pancakes',
+    'Lomi',
+    'Burger & Sandwiches',
+    'Finger Food',
+    'Extras',
+    'Add-Ons',
+];
+
+if (recipeCategoriesMeta) {
+    try {
+        const parsed = JSON.parse(recipeCategoriesMeta);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            defaultRecipeCategories = parsed;
+        }
+    } catch (error) {
+        console.warn('Failed to parse recipe categories meta tag, using defaults:', error);
+    }
+}
+
 export const createAppState = () => ({
     // App state
     currentUser: window.__appUser || null,
@@ -102,7 +131,7 @@ export const createAppState = () => ({
     },
 
     // Recipe Management
-    recipeCategories: ['Pizza', 'Salad', 'Burgers', 'Appetizers', 'Pasta', 'Seafood', 'Mexican', 'Desserts', 'Sides', 'Soups', 'Beverages'],
+    recipeCategories: defaultRecipeCategories,
     showRecipeCategories: false,
     recipeSearchTerm: '',
     recipeFilterCategory: 'all',

@@ -16,7 +16,7 @@ class RecipeSeeder extends Seeder
         $recipes = [
             [
                 'name' => 'Margherita Pizza',
-                'category' => 'Pizza',
+                'category' => 'Short Order',
                 'price' => 12.99,
                 'base_portions' => 2,
                 'prep_time' => 15,
@@ -36,7 +36,7 @@ class RecipeSeeder extends Seeder
             ],
             [
                 'name' => 'Caesar Salad',
-                'category' => 'Salads',
+                'category' => 'Extras',
                 'price' => 8.99,
                 'base_portions' => 1,
                 'prep_time' => 10,
@@ -56,7 +56,7 @@ class RecipeSeeder extends Seeder
             ],
             [
                 'name' => 'Classic Burger',
-                'category' => 'Burgers',
+                'category' => 'Burger & Sandwiches',
                 'price' => 14.99,
                 'base_portions' => 1,
                 'prep_time' => 15,
@@ -77,7 +77,7 @@ class RecipeSeeder extends Seeder
             ],
             [
                 'name' => 'Chicken Wings',
-                'category' => 'Appetizers',
+                'category' => 'Finger Food',
                 'price' => 11.99,
                 'base_portions' => 1,
                 'prep_time' => 20,
@@ -97,7 +97,7 @@ class RecipeSeeder extends Seeder
             ],
             [
                 'name' => 'Spaghetti Carbonara',
-                'category' => 'Pasta',
+                'category' => 'Pasta & Noodles',
                 'price' => 13.99,
                 'base_portions' => 1,
                 'prep_time' => 10,

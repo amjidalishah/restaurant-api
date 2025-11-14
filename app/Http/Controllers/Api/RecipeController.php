@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Recipe;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class RecipeController extends Controller
 {
@@ -51,10 +52,17 @@ class RecipeController extends Controller
 
         $recipes = $query->paginate($request->get('per_page', 15));
 
+        $definedCategories = collect(config('recipes.categories', []));
+        $dbCategories = Recipe::distinct()->pluck('category')->filter();
+        $categories = $definedCategories
+            ->merge($dbCategories)
+            ->unique()
+            ->values();
+
         return response()->json([
             'success' => true,
             'data' => $recipes,
-            'categories' => Recipe::distinct()->pluck('category'),
+            'categories' => $categories,
         ]);
     }
 
@@ -65,7 +73,12 @@ class RecipeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
+            'category' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::in(config('recipes.categories', [])),
+            ],
             'price' => 'required|numeric|min:0',
             'base_portions' => 'required|integer|min:1',
             'prep_time' => 'required|integer|min:0',
@@ -107,7 +120,13 @@ class RecipeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'category' => 'sometimes|required|string|max:255',
+            'category' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::in(config('recipes.categories', [])),
+            ],
             'price' => 'sometimes|required|numeric|min:0',
             'base_portions' => 'sometimes|required|integer|min:1',
             'prep_time' => 'sometimes|required|integer|min:0',
@@ -179,7 +198,12 @@ class RecipeController extends Controller
      */
     public function categories(): JsonResponse
     {
-        $categories = Recipe::distinct()->pluck('category');
+        $definedCategories = collect(config('recipes.categories', []));
+        $dbCategories = Recipe::distinct()->pluck('category')->filter();
+        $categories = $definedCategories
+            ->merge($dbCategories)
+            ->unique()
+            ->values();
 
         return response()->json([
             'success' => true,
