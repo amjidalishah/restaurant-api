@@ -218,7 +218,7 @@
             </div>
             
             <div class="mt-6 flex flex-wrap justify-center gap-4">
-                <div class="flex items-center gap-2">
+                <!-- <div class="flex items-center gap-2">
                     <select x-model="reportFilters.exportType" class="border rounded-lg px-3 py-2">
                         <option value="orders">Orders</option>
                         <option value="recipes">Recipes</option>
@@ -232,7 +232,7 @@
                         <option value="week">This Week</option>
                         <option value="month">This Month</option>
                     </select>
-                </div>
+                </div> -->
                 <button @click="exportData()" 
                         class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition">
                     <i class="fas fa-download mr-2"></i>

@@ -50,9 +50,9 @@
                     <i class="fas fa-utensils"></i>
                     <span x-text="translations.appTitle"></span>
                 </h1>
-                <span class="hidden md:inline text-sm text-white/70">
+                <!-- <span class="hidden md:inline text-sm text-white/70">
                     {{ config('app.name', 'Blessed Cafe Suite') }}
-                </span>
+                </span> -->
             </div>
 
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">

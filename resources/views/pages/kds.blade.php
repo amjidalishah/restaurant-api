@@ -41,11 +41,11 @@
                             class="bg-gray-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-gray-600 transition">
                         <i class="fas fa-cog"></i>
                     </button>
-                    <button @click="showChefStationManager = true"
+                    <!-- <button @click="showChefStationManager = true"
                             class="bg-primary text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-700 transition">
                         <i class="fas fa-users-cog"></i>
                         <span class="hidden md:inline" x-text="translations.kdsManageChefs"></span>
-                    </button>
+                    </button> -->
                 </div>
             </div>
             
@@ -146,7 +146,7 @@
                                     </div>
                                     
                                     <!-- Assigned Chef/Station -->
-                                    <div class="flex items-center gap-2 mt-2">
+                                    <!-- <div class="flex items-center gap-2 mt-2">
                                         <template x-if="order.assignedChef">
                                             <div class="bg-gray-100 px-2 py-1 rounded text-xs flex items-center gap-1">
                                                 <i class="fas fa-user-tie text-primary"></i>
@@ -164,7 +164,7 @@
                                                 <span x-text="translations.kdsAssignChef"></span>
                                             </button>
                                         </template>
-                                    </div>
+                                    </div> -->
                                 </div>
                             </template>
                         </template>
