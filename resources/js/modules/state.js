@@ -177,7 +177,7 @@ export const createAppState = () => ({
     // Translations
     translations: {
         // App
-        appTitle: 'Restaurant Manager',
+        appTitle: 'BlessedCafe',
 
         // POS
         pos: 'POS',
@@ -189,7 +189,7 @@ export const createAppState = () => ({
         item: 'Item',
         total: 'Total',
         subtotal: 'Subtotal',
-        tax: 'VAT (10%)',
+        tax: 'VAT',
         placeOrder: 'Place Order',
         emptyOrder: 'Add items to your order',
 
@@ -396,7 +396,7 @@ export const createAppState = () => ({
         item: 'الصنف',
         total: 'الإجمالي',
         subtotal: 'المجموع الفرعي',
-        tax: 'ضريبة القيمة المضافة (10%)',
+        tax: 'ضريبة القيمة المضافة',
         placeOrder: 'تقديم الطلب',
         emptyOrder: 'أضف أصناف إلى طلبك',
         kds: 'شاشة المطبخ',
@@ -862,7 +862,9 @@ export const createAppState = () => ({
             // Load settings
             const settingsResponse = await api.getSettings();
             if (settingsResponse.success) {
-                this.settings = settingsResponse.data.data || settingsResponse.data;
+                const payload = settingsResponse.data?.data || settingsResponse.data || {};
+                this.settings = this.normalizeSettings(payload);
+                localStorage.setItem('restaurant_settings', JSON.stringify(this.settings));
             } else {
                 this.loadSettingsFromLocalStorage();
             }
@@ -971,7 +973,9 @@ export const createAppState = () => ({
 
     loadSettingsFromLocalStorage() {
         const savedSettings = localStorage.getItem('restaurant_settings');
-        this.settings = savedSettings ? JSON.parse(savedSettings) : this.getDefaultSettings();
+        this.settings = savedSettings
+            ? this.normalizeSettings(JSON.parse(savedSettings))
+            : this.getDefaultSettings();
     },
 
     loadAllFromLocalStorage() {
@@ -1069,7 +1073,7 @@ export const createAppState = () => ({
             taxRate: 10,
             deliveryFee: 5,
             currency: 'PHP',
-            restaurantName: 'Restaurant Manager',
+            restaurantName: 'BlessedCafe',
             address: '123 Main Street, City, State 12345',
             phone: '+1 (555) 123-4567',
             email: 'info@restaurant.com',
@@ -1083,6 +1087,33 @@ export const createAppState = () => ({
             receiptWidth: 80,
             fontSize: 12
         };
+    },
+
+    normalizeSettings(settings = {}) {
+        const defaults = this.getDefaultSettings();
+        const keyMap = {
+            restaurant_name: 'restaurantName',
+            tax_rate: 'taxRate',
+            delivery_fee: 'deliveryFee',
+            receipt_footer: 'receiptFooter',
+            print_header: 'printHeader',
+            print_footer: 'printFooter',
+            auto_print: 'autoPrint',
+            receipt_width: 'receiptWidth',
+            font_size: 'fontSize',
+            logo: 'logo',
+        };
+
+        const normalized = { ...defaults };
+
+        Object.entries(settings || {}).forEach(([key, value]) => {
+            const camelKey = keyMap[key] || key;
+            if (value !== undefined) {
+                normalized[camelKey] = value;
+            }
+        });
+
+        return normalized;
     },
 
     // Data validation and cleanup
@@ -1132,7 +1163,7 @@ export const createAppState = () => ({
         } else {
             // Reset to English translations
             this.translations = {
-                appTitle: 'Restaurant Manager',
+                appTitle: 'BlessedCafe',
                 pos: 'POS',
                 orderType: 'Order Type',
                 dineIn: 'Dine-In',

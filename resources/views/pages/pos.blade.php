@@ -268,13 +268,13 @@
                         <span x-text="formatPrice(currentOrder.subtotal)"></span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span x-text="translations.tax + ' (' + settings.taxRate + '%)'"></span>
+                        <span x-text="translations.tax + ' (' + ((settings.taxRate ?? settings.tax_rate ?? 0)) + '%)'"></span>
                         <span x-text="formatPrice(currentOrder.tax)"></span>
                     </div>
-                    <div x-show="orderType === 'delivery'" class="flex justify-between text-sm">
+                    <!-- <div x-show="orderType === 'delivery'" class="flex justify-between text-sm">
                         <span x-text="translations.deliveryFee"></span>
                         <span x-text="formatPrice(currentOrder.deliveryFee)"></span>
-                    </div>
+                    </div> -->
                     <div class="flex justify-between font-bold text-lg pt-2 border-t">
                         <span x-text="translations.total"></span>
                         <span x-text="formatPrice(currentOrder.total)"></span>

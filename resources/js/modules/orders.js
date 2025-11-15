@@ -71,14 +71,17 @@ export const createOrdersModule = () => ({
         this.currentOrder.subtotal = this.currentOrder.items.reduce(
             (sum, item) => sum + (item.price * item.quantity), 0
         );
-        
-        // Apply tax rate from settings
-        this.currentOrder.tax = this.currentOrder.subtotal * (this.settings.taxRate / 100);
-        
-        // Apply delivery fee if delivery order
-        this.currentOrder.deliveryFee = this.orderType === 'delivery' ? this.settings.deliveryFee : 0;
-        
-        this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.tax + this.currentOrder.deliveryFee;
+
+        const taxRateSetting = this.settings?.taxRate ?? this.settings?.tax_rate ?? 0;
+        const taxRate = parseFloat(taxRateSetting) || 0;
+        this.currentOrder.tax = this.currentOrder.subtotal * (taxRate / 100);
+
+        this.currentOrder.deliveryFee = this.orderType === 'delivery'
+            ? (this.settings?.deliveryFee ?? this.settings?.delivery_fee ?? 0)
+            : 0;
+
+        // Subtotal already includes VAT; do not add tax again
+        this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.deliveryFee;
     },
 
     async placeOrder() {
@@ -588,7 +591,8 @@ export const createOrdersModule = () => ({
         // Totals
         html += '<div class="totals">';
         html += `<div class="total-line">${this.translations.subtotal || 'Subtotal'}: ${this.formatPrice(receipt.subtotal || 0)}</div>`;
-        html += `<div class="total-line">${this.translations.tax || 'Tax'}: ${this.formatPrice(receipt.tax || 0)}</div>`;
+        const receiptTaxLabel = `${this.translations.tax || 'Tax'} (${(this.settings?.taxRate ?? this.settings?.tax_rate ?? 0)}%)`;
+        html += `<div class="total-line">${receiptTaxLabel}: ${this.formatPrice(receipt.tax || 0)}</div>`;
         if (receipt.deliveryFee > 0) {
             html += `<div class="total-line">${this.translations.deliveryFee || 'Delivery Fee'}: ${this.formatPrice(receipt.deliveryFee || 0)}</div>`;
         }

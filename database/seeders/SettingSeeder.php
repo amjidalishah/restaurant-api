@@ -16,7 +16,7 @@ class SettingSeeder extends Seeder
         $settings = [
             [
                 'key' => 'restaurant_name',
-                'value' => 'Restaurant Manager',
+                'value' => 'BlessedCafe',
                 'type' => 'string',
                 'description' => 'Restaurant name for receipts and branding',
             ],

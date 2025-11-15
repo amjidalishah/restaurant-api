@@ -9,7 +9,9 @@ export const createSettingsModule = (state) => ({
         try {
             const response = await api.getSettings();
             if (response.success) {
-                state.settings = response.data.data || response.data;
+                const data = response.data?.data ?? response.data;
+                state.settings = data && Object.keys(data).length ? data : this.getDefaultSettings();
+                localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
             } else {
                 this.loadSettingsFromLocalStorage();
             }
@@ -28,7 +30,8 @@ export const createSettingsModule = (state) => ({
         try {
             const response = await api.updateSettings(state.settings);
             if (response.success) {
-                // Save to localStorage as fallback
+                const updatedSettings = response.data?.data ?? state.settings;
+                state.settings = { ...state.settings, ...updatedSettings };
                 localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
                 alert('Settings saved successfully!');
             } else {
@@ -36,9 +39,8 @@ export const createSettingsModule = (state) => ({
             }
         } catch (error) {
             console.error('Error saving settings:', error);
-            // Fallback to localStorage only
             localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
-            alert('Settings saved to local storage. Some features may not sync with server.');
+            alert('Settings saved locally only. Some features may not sync with server.');
         }
     },
 
@@ -47,7 +49,7 @@ export const createSettingsModule = (state) => ({
             taxRate: 10,
             deliveryFee: 5,
             currency: 'PHP',
-            restaurantName: 'Restaurant Manager',
+            restaurantName: 'BlessedCafe',
             address: '123 Main Street, City, State 12345',
             phone: '+1 (555) 123-4567',
             email: 'info@restaurant.com',
@@ -89,7 +91,7 @@ export const createSettingsModule = (state) => ({
                 email: info.email,
                 website: info.website
             });
-            
+
             if (response.success) {
                 Object.assign(state.settings, info);
                 localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
@@ -113,7 +115,7 @@ export const createSettingsModule = (state) => ({
                 receiptWidth: settings.receiptWidth,
                 fontSize: settings.fontSize
             });
-            
+
             if (response.success) {
                 Object.assign(state.settings, settings);
                 localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
@@ -130,12 +132,12 @@ export const createSettingsModule = (state) => ({
         try {
             const formData = new FormData();
             formData.append('logo', file);
-            
+
             const response = await fetch('/api/settings/upload-logo', {
                 method: 'POST',
                 body: formData
             });
-            
+
             const result = await response.json();
             if (result.success) {
                 state.settings.logo = result.data.logo_url;
@@ -155,7 +157,7 @@ export const createSettingsModule = (state) => ({
                 taxRate: parseFloat(taxRate),
                 deliveryFee: parseFloat(deliveryFee)
             });
-            
+
             if (response.success) {
                 state.settings.taxRate = parseFloat(taxRate);
                 state.settings.deliveryFee = parseFloat(deliveryFee);
@@ -172,7 +174,7 @@ export const createSettingsModule = (state) => ({
     async updateCurrencySettings(currency) {
         try {
             const response = await api.updateSettings({ currency });
-            
+
             if (response.success) {
                 state.settings.currency = currency;
                 localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
@@ -187,15 +189,15 @@ export const createSettingsModule = (state) => ({
     // Print settings validation
     validatePrintSettings(settings) {
         const errors = [];
-        
+
         if (settings.receiptWidth < 50 || settings.receiptWidth > 120) {
             errors.push('Receipt width must be between 50 and 120 mm');
         }
-        
+
         if (settings.fontSize < 8 || settings.fontSize > 16) {
             errors.push('Font size must be between 8 and 16 pt');
         }
-        
+
         return errors;
     },
 
@@ -206,16 +208,16 @@ export const createSettingsModule = (state) => ({
             exportDate: new Date().toISOString(),
             version: '1.0'
         };
-        
+
         const dataStr = JSON.stringify(settingsData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
-        
+
         const link = document.createElement('a');
         link.href = url;
         link.download = `restaurant_settings_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
-        
+
         URL.revokeObjectURL(url);
     },
 
@@ -223,22 +225,22 @@ export const createSettingsModule = (state) => ({
         try {
             const text = await file.text();
             const data = JSON.parse(text);
-            
+
             if (data.settings) {
                 // Validate settings structure
                 const requiredKeys = ['taxRate', 'deliveryFee', 'currency', 'restaurantName'];
                 const hasRequiredKeys = requiredKeys.every(key => data.settings.hasOwnProperty(key));
-                
+
                 if (!hasRequiredKeys) {
                     throw new Error('Invalid settings file format');
                 }
-                
+
                 // Update settings
                 state.settings = { ...state.settings, ...data.settings };
-                
+
                 // Save to API and localStorage
                 await this.saveSettings();
-                
+
                 return true;
             } else {
                 throw new Error('Invalid settings file format');
@@ -256,7 +258,7 @@ export const createSettingsModule = (state) => ({
             try {
                 const defaultSettings = this.getDefaultSettings();
                 const response = await api.updateSettings(defaultSettings);
-                
+
                 if (response.success) {
                     state.settings = defaultSettings;
                     localStorage.setItem('restaurant_settings', JSON.stringify(state.settings));
@@ -277,37 +279,37 @@ export const createSettingsModule = (state) => ({
     // Settings validation
     validateSettings(settings) {
         const errors = [];
-        
+
         // Validate tax rate
         if (settings.taxRate < 0 || settings.taxRate > 100) {
             errors.push('Tax rate must be between 0 and 100');
         }
-        
+
         // Validate delivery fee
         if (settings.deliveryFee < 0) {
             errors.push('Delivery fee cannot be negative');
         }
-        
+
         // Validate receipt width
         if (settings.receiptWidth < 50 || settings.receiptWidth > 120) {
             errors.push('Receipt width must be between 50 and 120 mm');
         }
-        
+
         // Validate font size
         if (settings.fontSize < 8 || settings.fontSize > 16) {
             errors.push('Font size must be between 8 and 16 pt');
         }
-        
+
         // Validate email format
         if (settings.email && !this.isValidEmail(settings.email)) {
             errors.push('Invalid email format');
         }
-        
+
         // Validate phone format
         if (settings.phone && !this.isValidPhone(settings.phone)) {
             errors.push('Invalid phone number format');
         }
-        
+
         return errors;
     },
 
@@ -352,16 +354,16 @@ export const createSettingsModule = (state) => ({
     getSettingsByCategory(category) {
         const categories = this.getSettingsCategories();
         const categorySettings = categories[category];
-        
+
         if (!categorySettings) return {};
-        
+
         const filteredSettings = {};
         categorySettings.settings.forEach(key => {
             if (state.settings.hasOwnProperty(key)) {
                 filteredSettings[key] = state.settings[key];
             }
         });
-        
+
         return filteredSettings;
     },
 
@@ -373,7 +375,7 @@ export const createSettingsModule = (state) => ({
                 timestamp: new Date().toISOString(),
                 version: '1.0'
             };
-            
+
             const response = await api.request('post', '/settings/backup', backupData);
             if (response.success) {
                 alert('Settings backed up successfully!');

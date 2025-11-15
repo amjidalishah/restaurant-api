@@ -124,6 +124,8 @@ class SettingController extends Controller
      */
     public function setValue(Request $request, string $key): JsonResponse
     {
+        $key = $this->normalizeSettingKey($key);
+
         $validated = $request->validate([
             'value' => 'required',
             'type' => 'sometimes|in:string,number,boolean,json',
@@ -138,7 +140,7 @@ class SettingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Setting value updated successfully',
-            'data' => $setting,
+            'data' => $this->formatSettingsForFrontend(),
         ]);
     }
 
@@ -147,22 +149,7 @@ class SettingController extends Controller
      */
     public function getRestaurantSettings(): JsonResponse
     {
-        $settings = [
-            'restaurant_name' => Setting::getValue('restaurant_name', 'Restaurant Manager'),
-            'address' => Setting::getValue('address', ''),
-            'phone' => Setting::getValue('phone', ''),
-            'email' => Setting::getValue('email', ''),
-            'website' => Setting::getValue('website', ''),
-            'tax_rate' => Setting::getValue('tax_rate', 10),
-            'delivery_fee' => Setting::getValue('delivery_fee', 5),
-            'currency' => Setting::getValue('currency', 'PHP'),
-            'receipt_footer' => Setting::getValue('receipt_footer', ''),
-            'print_header' => Setting::getValue('print_header', true),
-            'print_footer' => Setting::getValue('print_footer', true),
-            'auto_print' => Setting::getValue('auto_print', false),
-            'receipt_width' => Setting::getValue('receipt_width', 80),
-            'font_size' => Setting::getValue('font_size', 12),
-        ];
+        $settings = $this->formatSettingsForFrontend();
 
         return response()->json([
             'success' => true,
@@ -175,7 +162,9 @@ class SettingController extends Controller
      */
     public function updateRestaurantSettings(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $normalized = $this->normalizeSettingPayload($request->all());
+
+        $validated = validator($normalized, [
             'restaurant_name' => 'sometimes|string|max:255',
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:255',
@@ -190,7 +179,8 @@ class SettingController extends Controller
             'auto_print' => 'sometimes|boolean',
             'receipt_width' => 'sometimes|integer|min:50|max:120',
             'font_size' => 'sometimes|integer|min:8|max:16',
-        ]);
+            'logo' => 'nullable|string',
+        ])->validate();
 
         foreach ($validated as $key => $value) {
             $type = is_bool($value) ? 'boolean' : (is_numeric($value) ? 'number' : 'string');
@@ -200,6 +190,7 @@ class SettingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Restaurant settings updated successfully',
+            'data' => $this->formatSettingsForFrontend(),
         ]);
     }
 
@@ -214,5 +205,89 @@ class SettingController extends Controller
             'success' => true,
             'data' => $types,
         ]);
+    }
+
+    /**
+     * Normalize payload keys coming from the frontend (camelCase) to snake_case.
+     */
+    private function normalizeSettingPayload(array $payload): array
+    {
+        $mapping = $this->getKeyMapping();
+
+        foreach ($mapping as $camel => $snake) {
+            if (array_key_exists($camel, $payload)) {
+                $payload[$snake] = $payload[$camel];
+                unset($payload[$camel]);
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Return settings formatted for the frontend (camelCase keys).
+     */
+    private function formatSettingsForFrontend(): array
+    {
+        $mapping = array_flip($this->getKeyMapping());
+        $defaults = [
+            'restaurant_name' => config('app.name', 'BlessedCafe'),
+            'address' => '',
+            'phone' => '',
+            'email' => '',
+            'website' => '',
+            'tax_rate' => 10,
+            'delivery_fee' => 5,
+            'currency' => 'PHP',
+            'receipt_footer' => '',
+            'print_header' => true,
+            'print_footer' => true,
+            'auto_print' => false,
+            'receipt_width' => 80,
+            'font_size' => 12,
+            'logo' => '',
+        ];
+
+        $snakeSettings = [];
+        foreach ($defaults as $key => $default) {
+            $snakeSettings[$key] = Setting::getValue($key, $default);
+        }
+
+        $formatted = [];
+        foreach ($snakeSettings as $snakeKey => $value) {
+            $camelKey = $mapping[$snakeKey] ?? $snakeKey;
+            $formatted[$camelKey] = $value;
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Mapping between camelCase frontend keys and snake_case DB keys.
+     */
+    private function getKeyMapping(): array
+    {
+        return [
+            'restaurantName' => 'restaurant_name',
+            'address' => 'address',
+            'phone' => 'phone',
+            'email' => 'email',
+            'website' => 'website',
+            'taxRate' => 'tax_rate',
+            'deliveryFee' => 'delivery_fee',
+            'currency' => 'currency',
+            'receiptFooter' => 'receipt_footer',
+            'printHeader' => 'print_header',
+            'printFooter' => 'print_footer',
+            'autoPrint' => 'auto_print',
+            'receiptWidth' => 'receipt_width',
+            'fontSize' => 'font_size',
+            'logo' => 'logo',
+        ];
+    }
+
+    private function normalizeSettingKey(string $key): string
+    {
+        return $this->getKeyMapping()[$key] ?? $key;
     }
 }

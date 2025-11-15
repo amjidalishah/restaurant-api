@@ -49,7 +49,7 @@
             <div class="flex items-center gap-3">
                 <h1 class="text-xl font-bold flex items-center gap-2">
                     <i class="fas fa-utensils"></i>
-                    <span x-text="translations.appTitle"></span>
+                    <span x-text="settings.restaurantName || translations.appTitle"></span>
                 </h1>
                 <!-- <span class="hidden md:inline text-sm text-white/70">
                     {{ config('app.name', 'Blessed Cafe Suite') }}

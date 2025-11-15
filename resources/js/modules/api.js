@@ -161,7 +161,7 @@ class ApiClient {
     // SETTINGS
     // ==============================
     getSettings() {
-        return this.request('get', '/settings');
+        return this.request('get', '/settings/restaurant');
     }
 
     updateSettings(data) {

@@ -72,13 +72,13 @@ Route::patch('stations/{station}/toggle-active', [StationController::class, 'tog
 Route::get('stations/{station}/stats', [StationController::class, 'getStats']);
 Route::get('stations/active', [StationController::class, 'getActive']);
 
-// Setting Routes
-Route::apiResource('settings', SettingController::class);
-Route::get('settings/value/{key}', [SettingController::class, 'getValue']);
-Route::post('settings/value/{key}', [SettingController::class, 'setValue']);
+// Setting Routes (specific routes must come before resource routes)
 Route::get('settings/restaurant', [SettingController::class, 'getRestaurantSettings']);
 Route::post('settings/restaurant', [SettingController::class, 'updateRestaurantSettings']);
+Route::get('settings/value/{key}', [SettingController::class, 'getValue']);
+Route::post('settings/value/{key}', [SettingController::class, 'setValue']);
 Route::get('settings/types', [SettingController::class, 'getTypes']);
+Route::apiResource('settings', SettingController::class);
 
 // Inventory Routes
 Route::apiResource('inventory', InventoryController::class);
