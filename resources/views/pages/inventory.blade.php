@@ -448,18 +448,23 @@
                     </div>
                 </div>
                 
-                <div class="mt-6 flex justify-center gap-4">
+                <div class="mt-6 flex flex-wrap justify-center gap-4">
                     <button @click="exportInventoryData()" 
-                            class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition">
-                        <i class="fas fa-download mr-2"></i>
+                            class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition flex items-center gap-2">
+                        <i class="fas fa-download"></i>
                         <span x-text="translations.exportInventory"></span>
                     </button>
-                    <input type="file" @change="importInventoryData($event.target.files[0])" accept=".json" class="hidden" id="importInventory">
-                    <label for="importInventory" 
-                           class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition cursor-pointer">
-                        <i class="fas fa-upload mr-2"></i>
+                    <input type="file"
+                           x-ref="inventoryImportInput"
+                           @change="importInventoryData($event.target.files[0])"
+                           accept=".json"
+                           class="hidden">
+                    <button type="button"
+                            @click="$refs.inventoryImportInput?.click()"
+                            class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition flex items-center gap-2">
+                        <i class="fas fa-upload"></i>
                         <span x-text="translations.importInventory"></span>
-                    </label>
+                    </button>
                 </div>
             </div>
         </div>

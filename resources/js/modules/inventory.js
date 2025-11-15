@@ -704,6 +704,93 @@ export const createInventoryModule = (state) => ({
             description: item.description || ''
         };
     },
+
+    formatInventoryForImport(item = {}, supplierIdMap = new Map()) {
+        return {
+            name: item.name || '',
+            category: item.category || 'General',
+            unit: item.unit || '',
+            current_stock: Number(item.currentStock ?? item.current_stock ?? 0),
+            min_stock: Number(item.minStock ?? item.min_stock ?? 0),
+            max_stock: Number(item.maxStock ?? item.max_stock ?? 0),
+            cost_per_unit: Number(item.cost ?? item.cost_per_unit ?? 0),
+            supplier_id: supplierIdMap.get(item.supplier_id) ?? null,
+            location: item.location || '',
+            expiry_date: item.expiryDate ?? item.expiry_date ?? null,
+            notes: item.notes || '',
+            sku: item.sku || null,
+            description: item.description || '',
+            is_active: typeof item.isActive === 'boolean' ? item.isActive :
+                (typeof item.is_active === 'boolean' ? item.is_active : true),
+        };
+    },
+
+    formatSupplierForImport(supplier = {}) {
+        return {
+            name: supplier.name || 'Supplier',
+            contact_person: supplier.contact_person ?? supplier.contactPerson ?? null,
+            email: supplier.email || null,
+            phone: supplier.phone || null,
+            address: supplier.address || null,
+            city: supplier.city || null,
+            state: supplier.state || null,
+            postal_code: supplier.postal_code ?? supplier.postalCode ?? null,
+            country: supplier.country || null,
+            website: supplier.website || null,
+            tax_id: supplier.tax_id ?? supplier.taxId ?? null,
+            payment_terms: supplier.payment_terms ?? supplier.paymentTerms ?? null,
+            credit_limit: Number(supplier.credit_limit ?? supplier.creditLimit ?? 0) || null,
+            is_active: typeof supplier.is_active === 'boolean' ? supplier.is_active :
+                (typeof supplier.isActive === 'boolean' ? supplier.isActive : true),
+            notes: supplier.notes || null,
+            rating: supplier.rating ?? null,
+            lead_time_days: supplier.lead_time_days ?? supplier.leadTimeDays ?? null,
+            minimum_order: supplier.minimum_order ?? supplier.minimumOrder ?? null,
+            delivery_fee: supplier.delivery_fee ?? supplier.deliveryFee ?? null,
+        };
+    },
+
+    formatPurchaseForImport(purchase = {}, supplierIdMap = new Map(), inventoryIdMap = new Map()) {
+        const mappedItems = Array.isArray(purchase.items)
+            ? purchase.items.map(item => ({
+                ...item,
+                inventory_id: inventoryIdMap.get(item.inventory_id) ?? item.inventory_id ?? null
+            }))
+            : [];
+
+        return {
+            purchase_number: purchase.purchase_number ?? purchase.purchaseNumber ?? null,
+            supplier_id: supplierIdMap.get(purchase.supplier_id) ?? null,
+            order_date: purchase.order_date ?? purchase.orderDate ?? null,
+            expected_delivery: purchase.expected_delivery ?? purchase.expectedDelivery ?? null,
+            delivery_date: purchase.delivery_date ?? purchase.deliveryDate ?? null,
+            status: purchase.status || 'pending',
+            subtotal: purchase.subtotal ?? 0,
+            tax_amount: purchase.tax_amount ?? 0,
+            shipping_cost: purchase.shipping_cost ?? 0,
+            discount_amount: purchase.discount_amount ?? 0,
+            total_amount: purchase.total_amount ?? 0,
+            payment_status: purchase.payment_status ?? 'pending',
+            payment_method: purchase.payment_method ?? null,
+            notes: purchase.notes ?? null,
+            rating: purchase.rating ?? null,
+            received_by: purchase.received_by ?? null,
+            approved_by: purchase.approved_by ?? null,
+            items: mappedItems,
+            invoice_number: purchase.invoice_number ?? null,
+            tracking_number: purchase.tracking_number ?? null,
+        };
+    },
+
+    formatWasteForImport(waste = {}, inventoryIdMap = new Map()) {
+        return {
+            inventory_id: inventoryIdMap.get(waste.inventory_id) ?? null,
+            quantity: waste.quantity ?? 0,
+            reason: waste.reason ?? 'Unknown',
+            waste_date: waste.waste_date ?? waste.date ?? new Date().toISOString().split('T')[0],
+            notes: waste.notes ?? null,
+        };
+    },
     
     async getTopSuppliers() {
         try {
@@ -721,7 +808,7 @@ export const createInventoryModule = (state) => ({
                             supplierStats[supplier.name] = { count: 0, value: 0 };
                         }
                         supplierStats[supplier.name].count++;
-                        supplierStats[supplier.name].value += item.current_stock * item.cost_per_unit;
+                        supplierStats[supplier.name].value += (item.currentStock ?? 0) * (item.cost ?? 0);
                     }
                 }
             });
@@ -764,25 +851,40 @@ export const createInventoryModule = (state) => ({
             try {
                 const data = JSON.parse(e.target.result);
                 
-                // Import data through API
-                if (data.inventory) {
-                    for (const item of data.inventory) {
-                        await api.request('post', '/inventory', item);
-                    }
-                }
-                if (data.suppliers) {
+                const supplierIdMap = new Map();
+                const inventoryIdMap = new Map();
+
+                if (Array.isArray(data.suppliers)) {
                     for (const supplier of data.suppliers) {
-                        await api.request('post', '/suppliers', supplier);
+                        const payload = this.formatSupplierForImport(supplier);
+                        const response = await api.request('post', '/suppliers', payload);
+                        if (response.success && response.data?.id) {
+                            supplierIdMap.set(supplier.id, response.data.id);
+                        }
                     }
                 }
-                if (data.purchases) {
+
+                if (Array.isArray(data.inventory)) {
+                    for (const item of data.inventory) {
+                        const payload = this.formatInventoryForImport(item, supplierIdMap);
+                        const response = await api.request('post', '/inventory', payload);
+                        if (response.success && response.data?.id) {
+                            inventoryIdMap.set(item.id, response.data.id);
+                        }
+                    }
+                }
+
+                if (Array.isArray(data.purchases)) {
                     for (const purchase of data.purchases) {
-                        await api.request('post', '/purchases', purchase);
+                        const payload = this.formatPurchaseForImport(purchase, supplierIdMap, inventoryIdMap);
+                        await api.request('post', '/purchases', payload);
                     }
                 }
-                if (data.waste) {
+
+                if (Array.isArray(data.waste)) {
                     for (const waste of data.waste) {
-                        await api.request('post', '/waste', waste);
+                        const payload = this.formatWasteForImport(waste, inventoryIdMap);
+                        await api.request('post', '/waste', payload);
                     }
                 }
                 
@@ -790,7 +892,7 @@ export const createInventoryModule = (state) => ({
                 alert('Inventory data imported successfully!');
             } catch (error) {
                 console.error('Error importing data:', error);
-                alert('Error importing data: ' + error.message);
+                alert('Error importing data: ' + (error.response?.data?.message || error.message));
             }
         };
         reader.readAsText(file);

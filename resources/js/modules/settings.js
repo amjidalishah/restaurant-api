@@ -224,32 +224,59 @@ export const createSettingsModule = (state) => ({
     async importSettings(file) {
         try {
             const text = await file.text();
-            const data = JSON.parse(text);
+            const parsed = JSON.parse(text);
 
-            if (data.settings) {
-                // Validate settings structure
-                const requiredKeys = ['taxRate', 'deliveryFee', 'currency', 'restaurantName'];
-                const hasRequiredKeys = requiredKeys.every(key => data.settings.hasOwnProperty(key));
+            const rawSettings = parsed.settings ?? parsed;
+            const normalizedSettings = this.normalizeImportedSettings(rawSettings);
 
-                if (!hasRequiredKeys) {
-                    throw new Error('Invalid settings file format');
-                }
-
-                // Update settings
-                state.settings = { ...state.settings, ...data.settings };
-
-                // Save to API and localStorage
-                await this.saveSettings();
-
-                return true;
-            } else {
+            if (!normalizedSettings || Object.keys(normalizedSettings).length === 0) {
                 throw new Error('Invalid settings file format');
             }
+
+            state.settings = { ...state.settings, ...normalizedSettings };
+            await this.saveSettings();
+            return true;
         } catch (error) {
-            console.error('Error importing settings:', error);
-            alert('Error importing settings. Please check the file format.');
+            console.error('Error importing settings:', error, file);
+            alert('Error importing settings. Please ensure the JSON file contains valid settings data.');
             return false;
         }
+    },
+
+    normalizeImportedSettings(settings = {}) {
+        const keyMap = {
+            restaurant_name: 'restaurantName',
+            tax_rate: 'taxRate',
+            delivery_fee: 'deliveryFee',
+            receipt_footer: 'receiptFooter',
+            print_header: 'printHeader',
+            print_footer: 'printFooter',
+            auto_print: 'autoPrint',
+            receipt_width: 'receiptWidth',
+            font_size: 'fontSize',
+            logo: 'logo',
+        };
+
+        if (!settings || typeof settings !== 'object') {
+            return null;
+        }
+
+        const normalized = {};
+
+        Object.entries(settings).forEach(([key, value]) => {
+            const trimmedKey = key.trim();
+            const camelKey = keyMap[trimmedKey] || this.toCamelCase(trimmedKey);
+            normalized[camelKey] = value;
+        });
+
+        const requiredKeys = ['taxRate', 'deliveryFee', 'currency', 'restaurantName'];
+        const hasRequired = requiredKeys.every(key => Object.prototype.hasOwnProperty.call(normalized, key));
+
+        return hasRequired ? normalized : null;
+    },
+
+    toCamelCase(key = '') {
+        return key.replace(/[_\s]+(.)?/g, (_, chr) => (chr ? chr.toUpperCase() : ''));
     },
 
     // Settings reset

@@ -253,7 +253,7 @@
                 <div class="border-t pt-4">
                     <h4 class="font-bold mb-2" x-text="translations.importBackup"></h4>
                     <p class="text-sm text-gray-600 mb-3">Import backup file to restore all data. This will replace current data.</p>
-                    <input type="file" @change="importBackupFile($event)" accept=".json"
+                    <input type="file" @change="importSettings($event.target.files[0])" accept=".json"
                            class="w-full border rounded-lg px-3 py-2">
                 </div>
                 
