@@ -253,6 +253,12 @@ class SettingController extends Controller
             $snakeSettings[$key] = Setting::getValue($key, $default);
         }
 
+        // Force system currency to PHP to keep UI consistent
+        if (($snakeSettings['currency'] ?? 'PHP') !== 'PHP') {
+            $snakeSettings['currency'] = 'PHP';
+            Setting::setValue('currency', 'PHP', 'string');
+        }
+
         $formatted = [];
         foreach ($snakeSettings as $snakeKey => $value) {
             $camelKey = $mapping[$snakeKey] ?? $snakeKey;

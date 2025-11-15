@@ -590,13 +590,17 @@ export const createOrdersModule = () => ({
         
         // Totals
         html += '<div class="totals">';
-        html += `<div class="total-line">${this.translations.subtotal || 'Subtotal'}: ${this.formatPrice(receipt.subtotal || 0)}</div>`;
+        const receiptSubtotal = receipt.subtotal ?? 0;
+        const receiptDeliveryFee = receipt.deliveryFee ?? 0;
+        const displayGrandTotal = receiptSubtotal + receiptDeliveryFee;
+
+        html += `<div class="total-line">${this.translations.subtotal || 'Subtotal'}: ${this.formatPrice(receiptSubtotal)}</div>`;
         const receiptTaxLabel = `${this.translations.tax || 'Tax'} (${(this.settings?.taxRate ?? this.settings?.tax_rate ?? 0)}%)`;
         html += `<div class="total-line">${receiptTaxLabel}: ${this.formatPrice(receipt.tax || 0)}</div>`;
-        if (receipt.deliveryFee > 0) {
-            html += `<div class="total-line">${this.translations.deliveryFee || 'Delivery Fee'}: ${this.formatPrice(receipt.deliveryFee || 0)}</div>`;
+        if (receiptDeliveryFee > 0) {
+            html += `<div class="total-line">${this.translations.deliveryFee || 'Delivery Fee'}: ${this.formatPrice(receiptDeliveryFee)}</div>`;
         }
-        html += `<div class="total-line grand-total">${this.translations.grandTotal || 'Grand Total'}: ${this.formatPrice(receipt.total || 0)}</div>`;
+        html += `<div class="total-line grand-total">${this.translations.grandTotal || 'Grand Total'}: ${this.formatPrice(displayGrandTotal)}</div>`;
         html += '</div>';
         
         // Footer

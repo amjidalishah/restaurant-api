@@ -267,13 +267,13 @@
                                                 </button>
                                             </div>
                                         </template>
-                                        <template x-if="!order.assignedChef">
+                                        <!-- <template x-if="!order.assignedChef">
                                             <button @click="showChefAssignModal = true; chefAssignOrderId = order.id; chefAssignName = ''; chefAssignStation = '';" 
                                                     class="bg-primary text-white px-2 py-1 rounded text-xs hover:bg-teal-700 transition flex items-center gap-1">
                                                 <i class="fas fa-user-plus"></i>
                                                 <span x-text="translations.kdsAssignChef"></span>
                                             </button>
-                                        </template>
+                                        </template> -->
                                     </div>
                                 </div>
                             </template>
@@ -362,13 +362,13 @@
                                                 </button>
                                             </div>
                                         </template>
-                                        <template x-if="!order.assignedChef">
+                                        <!-- <template x-if="!order.assignedChef">
                                             <button @click="showChefAssignModal = true; chefAssignOrderId = order.id; chefAssignName = ''; chefAssignStation = '';" 
                                                     class="bg-primary text-white px-2 py-1 rounded text-xs hover:bg-teal-700 transition flex items-center gap-1">
                                                 <i class="fas fa-user-plus"></i>
                                                 <span x-text="translations.kdsAssignChef"></span>
                                             </button>
-                                        </template>
+                                        </template> -->
                                     </div>
                                 </div>
                             </template>

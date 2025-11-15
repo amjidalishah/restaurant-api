@@ -10,6 +10,14 @@ export const createInventoryModule = (state) => ({
     purchases: [],
     waste: [],
     inventoryAlerts: [],
+    inventoryReport: {
+        totalItems: 0,
+        totalValue: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0,
+        topSuppliers: [],
+        recentTransactions: []
+    },
     
     // Form states
     showInventoryForm: false,
@@ -127,24 +135,7 @@ export const createInventoryModule = (state) => ({
                 }
                 
                 // Convert snake_case to camelCase for frontend
-                this.inventory = Array.isArray(data) ? data.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    category: item.category,
-                    unit: item.unit,
-                    currentStock: item.current_stock || item.currentStock || 0,
-                    minStock: item.min_stock || item.minStock || 0,
-                    maxStock: item.max_stock || item.maxStock || 0,
-                    cost: item.cost_per_unit || item.cost || 0,
-                    supplier_id: item.supplier_id,
-                    supplier: item.supplier ? (item.supplier.name || item.supplier) : '',
-                    location: item.location || '',
-                    expiryDate: item.expiry_date || item.expiryDate,
-                    notes: item.notes || '',
-                    isActive: item.is_active !== undefined ? item.is_active : (item.isActive !== undefined ? item.isActive : true),
-                    sku: item.sku || '',
-                    description: item.description || ''
-                })) : [];
+                this.inventory = Array.isArray(data) ? data.map(item => this.normalizeInventoryItem(item)) : [];
             } else {
                 this.inventory = [];
                 this.inventoryTotalItems = 0;
@@ -190,6 +181,8 @@ export const createInventoryModule = (state) => ({
         } catch (error) {
             console.error('Error updating inventory alerts:', error);
         }
+
+        await this.refreshInventoryReport();
     },
     
     // Inventory CRUD
@@ -575,12 +568,15 @@ export const createInventoryModule = (state) => ({
     async updateInventoryAlerts() {
         try {
             const lowStockRes = await api.request('get', '/inventory/alerts/low-stock');
-            this.inventoryAlerts = lowStockRes.success ? (lowStockRes.data.data || lowStockRes.data) : [];
+            const alerts = lowStockRes.success ? (lowStockRes.data.data || lowStockRes.data || []) : [];
+            this.inventoryAlerts = Array.isArray(alerts)
+                ? alerts.map(item => this.normalizeInventoryItem(item))
+                : [];
         } catch (error) {
             console.error('Error updating inventory alerts:', error);
             // Fallback to local calculation
-            this.inventoryAlerts = this.inventory.filter(item => 
-                item.current_stock <= item.min_stock
+            this.inventoryAlerts = this.inventory.filter(item =>
+                (item.currentStock ?? 0) <= (item.minStock ?? 0)
             );
         }
     },
@@ -591,7 +587,7 @@ export const createInventoryModule = (state) => ({
             return response.success ? (response.data.data || response.data) : [];
         } catch (error) {
             console.error('Error getting low stock items:', error);
-            return this.inventory.filter(item => item.current_stock <= item.min_stock);
+            return this.inventory.filter(item => (item.currentStock ?? 0) <= (item.minStock ?? 0));
         }
     },
     
@@ -601,7 +597,7 @@ export const createInventoryModule = (state) => ({
             return response.success ? (response.data.data || response.data) : [];
         } catch (error) {
             console.error('Error getting out of stock items:', error);
-            return this.inventory.filter(item => item.current_stock <= 0);
+            return this.inventory.filter(item => (item.currentStock ?? 0) <= 0);
         }
     },
     
@@ -616,30 +612,97 @@ export const createInventoryModule = (state) => ({
     },
     
     // Reports
-    async generateInventoryReport() {
+    generateInventoryReport() {
+        return this.inventoryReport;
+    },
+
+    async refreshInventoryReport() {
         try {
-            const report = {
-                totalItems: this.inventory.length,
-                totalValue: this.inventory.reduce((sum, item) => sum + (item.current_stock * item.cost_per_unit), 0),
-                lowStockItems: (await this.getLowStockItems()).length,
-                outOfStockItems: (await this.getOutOfStockItems()).length,
-                categories: this.getInventoryCategories().map(category => {
-                    const items = this.inventory.filter(item => item.category === category);
-                    return {
-                        category,
-                        count: items.length,
-                        value: items.reduce((sum, item) => sum + (item.current_stock * item.cost_per_unit), 0)
-                    };
-                }),
-                topSuppliers: await this.getTopSuppliers(),
-                recentTransactions: await this.getStockTransactions()
+            const totalItems = this.inventory.length;
+            const totalValue = this.inventory.reduce(
+                (sum, item) => sum + ((item.currentStock ?? 0) * (item.cost ?? 0)),
+                0
+            );
+            const lowStockItems = this.inventoryAlerts.length ||
+                this.inventory.filter(item => (item.currentStock ?? 0) <= (item.minStock ?? 0)).length;
+            const outOfStockItems = this.inventory.filter(item => (item.currentStock ?? 0) <= 0).length;
+
+            let topSuppliers = [];
+            try {
+                const supplierRes = await api.request('get', '/suppliers/performance');
+                topSuppliers = supplierRes.success
+                    ? (supplierRes.data.data || supplierRes.data || [])
+                    : [];
+            } catch (error) {
+                console.error('Error loading supplier performance:', error);
+                topSuppliers = this.calculateTopSuppliersFallback();
+            }
+
+            let recentTransactions = [];
+            try {
+                recentTransactions = await this.getStockTransactions();
+            } catch (error) {
+                console.error('Error loading stock transactions:', error);
+                recentTransactions = [];
+            }
+
+            this.inventoryReport = {
+                totalItems,
+                totalValue,
+                lowStockItems,
+                outOfStockItems,
+                topSuppliers: Array.isArray(topSuppliers) ? topSuppliers.slice(0, 5) : [],
+                recentTransactions: Array.isArray(recentTransactions) ? recentTransactions.slice(0, 5) : []
             };
-            
-            return report;
         } catch (error) {
-            console.error('Error generating inventory report:', error);
-            return null;
+            console.error('Error refreshing inventory report:', error);
+            this.inventoryReport = {
+                totalItems: 0,
+                totalValue: 0,
+                lowStockItems: 0,
+                outOfStockItems: 0,
+                topSuppliers: [],
+                recentTransactions: []
+            };
         }
+    },
+
+    calculateTopSuppliersFallback() {
+        const stats = {};
+        this.inventory.forEach(item => {
+            const supplierName = item.supplier || 'Unknown';
+            if (!stats[supplierName]) {
+                stats[supplierName] = { name: supplierName, value: 0, count: 0 };
+            }
+            stats[supplierName].count += 1;
+            stats[supplierName].value += (item.cost ?? 0) * (item.currentStock ?? 0);
+        });
+
+        return Object.values(stats)
+            .filter(supplier => supplier.name && supplier.name !== 'Unknown')
+            .sort((a, b) => b.value - a.value);
+    },
+
+    normalizeInventoryItem(item = {}) {
+        return {
+            id: item.id,
+            name: item.name || '',
+            category: item.category || '',
+            unit: item.unit || '',
+            currentStock: Number(item.current_stock ?? item.currentStock ?? 0),
+            minStock: Number(item.min_stock ?? item.minStock ?? 0),
+            maxStock: Number(item.max_stock ?? item.maxStock ?? 0),
+            cost: Number(item.cost_per_unit ?? item.cost ?? 0),
+            supplier_id: item.supplier_id ?? null,
+            supplier: item.supplier ? (item.supplier.name ?? item.supplier) : '',
+            location: item.location || '',
+            expiryDate: item.expiry_date ?? item.expiryDate ?? null,
+            notes: item.notes || '',
+            isActive: typeof item.is_active === 'boolean' ? item.is_active :
+                (typeof item.isActive === 'boolean' ? item.isActive : true),
+            sku: item.sku || '',
+            description: item.description || ''
+        };
     },
     
     async getTopSuppliers() {
