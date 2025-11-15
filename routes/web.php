@@ -16,8 +16,8 @@ Route::middleware('auth')->group(function () {
     Route::view('/pos', 'pos')->middleware('role:admin|cashier')->name('pos');
     Route::view('/kds', 'kds')->middleware('role:admin|kitchen')->name('kds');
     Route::view('/recipes', 'recipes')->middleware('role:admin|kitchen')->name('recipes');
-    Route::view('/tables', 'tables')->middleware('role:admin')->name('tables');
-    Route::view('/reports', 'reports')->middleware('role:admin')->name('reports');
+    Route::view('/tables', 'tables')->middleware('role:admin|cashier')->name('tables');
+    Route::view('/reports', 'reports')->middleware('role:admin|kitchen|inventory')->name('reports');
     Route::view('/inventory', 'inventory')->middleware('role:admin|inventory')->name('inventory');
 
     Route::get('/dashboard', function () {
@@ -29,8 +29,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    // Admin-only routes will go here.
-});
+// Extra admin-only routes go here as needed
 
 require __DIR__.'/auth.php';
