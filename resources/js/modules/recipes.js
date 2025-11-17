@@ -8,6 +8,7 @@ export const createRecipesModule = () => ({
     editRecipe(recipe) {
         this.editingRecipe = recipe;
         // Convert snake_case from backend to camelCase for frontend
+        const imagePath = recipe.image || '';
         this.recipeForm = {
             id: recipe.id,
             name: recipe.name || '',
@@ -22,11 +23,17 @@ export const createRecipesModule = () => ({
             ingredients: recipe.ingredients || [{ name: '', quantity: 0, unit: '', notes: '' }],
             instructions: recipe.instructions || '',
             notes: recipe.notes || '',
-            image: recipe.image || '',
+            image: imagePath ? (imagePath.startsWith('http') || imagePath.startsWith('/') ? imagePath : '/' + imagePath) : '',
+            imageFile: null,
             isActive: recipe.is_active !== undefined ? recipe.is_active : (recipe.isActive !== undefined ? recipe.isActive : true),
             createdAt: recipe.created_at || recipe.createdAt || null,
             updatedAt: recipe.updated_at || recipe.updatedAt || null
         };
+        // Clear file input
+        const imageInput = document.getElementById('recipe-image-input');
+        if (imageInput) {
+            imageInput.value = '';
+        }
         this.showRecipeForm = true;
     },
 
@@ -42,6 +49,10 @@ export const createRecipesModule = () => ({
         }
 
         try {
+            // Get image file from input if exists
+            const imageInput = document.getElementById('recipe-image-input');
+            const imageFile = imageInput && imageInput.files && imageInput.files.length > 0 ? imageInput.files[0] : null;
+            
             // Convert camelCase to snake_case for backend
             const recipeData = {
                 name: name,
@@ -56,9 +67,13 @@ export const createRecipesModule = () => ({
                 ingredients: Array.isArray(this.recipeForm.ingredients) ? this.recipeForm.ingredients : [{ name: '', quantity: 0, unit: '', notes: '' }],
                 instructions: this.recipeForm.instructions || '',
                 notes: this.recipeForm.notes || '',
-                image: this.recipeForm.image || '',
                 is_active: this.recipeForm.isActive !== undefined ? this.recipeForm.isActive : true
             };
+
+            // Add image file if exists
+            if (imageFile) {
+                recipeData.image = imageFile;
+            }
 
             let response;
             if (this.editingRecipe) {
@@ -116,25 +131,28 @@ export const createRecipesModule = () => ({
                         console.log('Reloaded recipes array:', recipesArray.length, recipesArray);
 
                         // Convert snake_case to camelCase for frontend consistency
-                        this.recipes = recipesArray.map(recipe => ({
-                            id: recipe.id,
-                            name: recipe.name || '',
-                            category: recipe.category || '',
-                            price: parseFloat(recipe.price) || 0,
-                            basePortions: recipe.base_portions || recipe.basePortions || 4,
-                            prepTime: recipe.prep_time || recipe.prepTime || 0,
-                            cookTime: recipe.cook_time || recipe.cookTime || 0,
-                            difficulty: recipe.difficulty || 'medium',
-                            tags: recipe.tags || [],
-                            allergens: recipe.allergens || [],
-                            ingredients: recipe.ingredients || [],
-                            instructions: recipe.instructions || '',
-                            notes: recipe.notes || '',
-                            image: recipe.image || '',
-                            isActive: recipe.is_active !== undefined ? recipe.is_active : (recipe.isActive !== undefined ? recipe.isActive : true),
-                            createdAt: recipe.created_at || recipe.createdAt || null,
-                            updatedAt: recipe.updated_at || recipe.updatedAt || null
-                        }));
+                        this.recipes = recipesArray.map(recipe => {
+                            const imagePath = recipe.image || '';
+                            return {
+                                id: recipe.id,
+                                name: recipe.name || '',
+                                category: recipe.category || '',
+                                price: parseFloat(recipe.price) || 0,
+                                basePortions: recipe.base_portions || recipe.basePortions || 4,
+                                prepTime: recipe.prep_time || recipe.prepTime || 0,
+                                cookTime: recipe.cook_time || recipe.cookTime || 0,
+                                difficulty: recipe.difficulty || 'medium',
+                                tags: recipe.tags || [],
+                                allergens: recipe.allergens || [],
+                                ingredients: recipe.ingredients || [],
+                                instructions: recipe.instructions || '',
+                                notes: recipe.notes || '',
+                                image: imagePath ? (imagePath.startsWith('http') || imagePath.startsWith('/') ? imagePath : '/' + imagePath) : '',
+                                isActive: recipe.is_active !== undefined ? recipe.is_active : (recipe.isActive !== undefined ? recipe.isActive : true),
+                                createdAt: recipe.created_at || recipe.createdAt || null,
+                                updatedAt: recipe.updated_at || recipe.updatedAt || null
+                            };
+                        });
 
                         if (this.recipes.length > 0) {
                             localStorage.setItem('restaurant_recipes', JSON.stringify(this.recipes));
@@ -192,10 +210,16 @@ export const createRecipesModule = () => ({
             instructions: '',
             notes: '',
             image: '',
+            imageFile: null,
             isActive: true,
             createdAt: null,
             updatedAt: null
         };
+        // Clear file input
+        const imageInput = document.getElementById('recipe-image-input');
+        if (imageInput) {
+            imageInput.value = '';
+        }
     },
 
     duplicateRecipe(recipe) {
@@ -436,5 +460,28 @@ export const createRecipesModule = () => ({
 
     removeAllergen(allergen) {
         this.recipeForm.allergens = this.recipeForm.allergens.filter(a => a !== allergen);
+    },
+
+    // Image handling
+    handleImageChange(event) {
+        const file = event.target.files[0];
+        if (file) {
+            this.recipeForm.imageFile = file;
+            // Create a preview URL
+            this.recipeForm.image = URL.createObjectURL(file);
+        }
+    },
+
+    removeImage() {
+        const imageInput = document.getElementById('recipe-image-input');
+        if (imageInput) {
+            imageInput.value = '';
+        }
+        // Revoke the object URL if it was created from a file
+        if (this.recipeForm.image && this.recipeForm.image.startsWith('blob:')) {
+            URL.revokeObjectURL(this.recipeForm.image);
+        }
+        this.recipeForm.image = '';
+        this.recipeForm.imageFile = null;
     }
 }); 

@@ -148,7 +148,32 @@
                                 </div>
                             </div>
 
-          
+                            <!-- Image Upload -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-1">Recipe Image</label>
+                                <div class="space-y-2">
+                                    <!-- Image Preview -->
+                                    <div x-show="recipeForm.image" class="mb-2">
+                                        <img :src="recipeForm.image" 
+                                             alt="Recipe preview" 
+                                             class="w-32 h-32 object-cover rounded-lg border border-gray-300">
+                                    </div>
+                                    <!-- File Input -->
+                                    <input type="file" 
+                                           id="recipe-image-input"
+                                           accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                                           @change="handleImageChange($event)"
+                                           class="w-full border rounded-lg px-3 py-2">
+                                    <p class="text-xs text-gray-500">Accepted formats: JPEG, PNG, JPG, GIF, WEBP (Max: 2MB)</p>
+                                    <!-- Remove Image Button -->
+                                    <button type="button" 
+                                            x-show="recipeForm.image"
+                                            @click="removeImage()"
+                                            class="text-sm text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times mr-1"></i>Remove Image
+                                    </button>
+                                </div>
+                            </div>
                           
                             <div class="mb-4">
                                 <label class="block text-sm font-medium mb-1" x-text="translations.ingredients"></label>
@@ -222,6 +247,13 @@
                                     <i class="fas fa-copy mr-1"></i>Duplicate
                                 </button>
                             </div>
+                        </div>
+                        
+                        <!-- Recipe Image -->
+                        <div x-show="selectedRecipe?.image" class="mb-6">
+                            <img :src="selectedRecipe.image ? (selectedRecipe.image.startsWith('http') || selectedRecipe.image.startsWith('/') ? selectedRecipe.image : '/' + selectedRecipe.image) : ''" 
+                                 :alt="selectedRecipe?.name"
+                                 class="w-full max-w-md h-64 object-cover rounded-lg border border-gray-300">
                         </div>
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

@@ -71,6 +71,23 @@ class RecipeController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Handle JSON strings from FormData
+        $data = $request->all();
+        if ($request->has('ingredients') && is_string($request->input('ingredients'))) {
+            $data['ingredients'] = json_decode($request->input('ingredients'), true);
+        }
+        if ($request->has('tags') && is_string($request->input('tags'))) {
+            $data['tags'] = json_decode($request->input('tags'), true);
+        }
+        if ($request->has('allergens') && is_string($request->input('allergens'))) {
+            $data['allergens'] = json_decode($request->input('allergens'), true);
+        }
+        if ($request->has('is_active') && is_string($request->input('is_active'))) {
+            $data['is_active'] = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN);
+        }
+        
+        $request->merge($data);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category' => [
@@ -89,9 +106,28 @@ class RecipeController extends Controller
             'ingredients' => 'required|array',
             'instructions' => 'required|string',
             'notes' => 'nullable|string',
-            'image' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Ensure directory exists
+            $imageDir = public_path('images/recipes');
+            if (!file_exists($imageDir)) {
+                mkdir($imageDir, 0755, true);
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = 'images/recipes/' . $imageName;
+            
+            $image->move($imageDir, $imageName);
+            
+            $validated['image'] = $imagePath;
+        } else {
+            $validated['image'] = null;
+        }
 
         $recipe = Recipe::create($validated);
 
@@ -118,6 +154,23 @@ class RecipeController extends Controller
      */
     public function update(Request $request, Recipe $recipe): JsonResponse
     {
+        // Handle JSON strings from FormData
+        $data = $request->all();
+        if ($request->has('ingredients') && is_string($request->input('ingredients'))) {
+            $data['ingredients'] = json_decode($request->input('ingredients'), true);
+        }
+        if ($request->has('tags') && is_string($request->input('tags'))) {
+            $data['tags'] = json_decode($request->input('tags'), true);
+        }
+        if ($request->has('allergens') && is_string($request->input('allergens'))) {
+            $data['allergens'] = json_decode($request->input('allergens'), true);
+        }
+        if ($request->has('is_active') && is_string($request->input('is_active'))) {
+            $data['is_active'] = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN);
+        }
+        
+        $request->merge($data);
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'category' => [
@@ -137,9 +190,38 @@ class RecipeController extends Controller
             'ingredients' => 'sometimes|required|array',
             'instructions' => 'sometimes|required|string',
             'notes' => 'nullable|string',
-            'image' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($recipe->image && file_exists(public_path($recipe->image))) {
+                unlink(public_path($recipe->image));
+            }
+            
+            // Ensure directory exists
+            $imageDir = public_path('images/recipes');
+            if (!file_exists($imageDir)) {
+                mkdir($imageDir, 0755, true);
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imagePath = 'images/recipes/' . $imageName;
+            
+            $image->move($imageDir, $imageName);
+            
+            $validated['image'] = $imagePath;
+        } elseif ($request->has('image') && $request->input('image') === null) {
+            // If image is explicitly set to null, delete existing image
+            if ($recipe->image && file_exists(public_path($recipe->image))) {
+                unlink(public_path($recipe->image));
+            }
+            $validated['image'] = null;
+        }
+        // If image is not provided, keep existing image (don't update it)
 
         $recipe->update($validated);
 
@@ -155,6 +237,11 @@ class RecipeController extends Controller
      */
     public function destroy(Recipe $recipe): JsonResponse
     {
+        // Delete associated image if exists
+        if ($recipe->image && file_exists(public_path($recipe->image))) {
+            unlink(public_path($recipe->image));
+        }
+
         $recipe->delete();
 
         return response()->json([

@@ -741,7 +741,10 @@ export const createAppState = () => ({
                                 ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
                                 instructions: recipe.instructions || '',
                                 notes: recipe.notes || '',
-                                image: recipe.image || '',
+                                image: (() => {
+                                    const imagePath = recipe.image || '';
+                                    return imagePath ? (imagePath.startsWith('http') || imagePath.startsWith('/') ? imagePath : '/' + imagePath) : '';
+                                })(),
                                 // Convert is_active to isActive, default to true if null or undefined
                                 isActive: recipe.is_active !== undefined && recipe.is_active !== null ? Boolean(recipe.is_active) : (recipe.isActive !== undefined && recipe.isActive !== null ? Boolean(recipe.isActive) : true),
                                 is_active: recipe.is_active !== undefined && recipe.is_active !== null ? Boolean(recipe.is_active) : (recipe.isActive !== undefined && recipe.isActive !== null ? Boolean(recipe.isActive) : true),

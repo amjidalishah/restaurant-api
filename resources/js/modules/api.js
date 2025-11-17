@@ -37,6 +37,57 @@ class ApiClient {
         }
     }
 
+    async requestFormData(method, url, data, options = {}) {
+        try {
+            let formData;
+            
+            if (data instanceof FormData) {
+                formData = data;
+            } else {
+                // Convert object to FormData
+                formData = new FormData();
+                
+                for (const key in data) {
+                    if (data[key] instanceof File) {
+                        formData.append(key, data[key]);
+                    } else if (data[key] !== null && data[key] !== undefined) {
+                        // Convert arrays and objects to JSON strings
+                        if (Array.isArray(data[key]) || typeof data[key] === 'object') {
+                            formData.append(key, JSON.stringify(data[key]));
+                        } else {
+                            formData.append(key, data[key]);
+                        }
+                    }
+                }
+            }
+
+            const fetchOptions = {
+                method: method.toUpperCase(),
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    // Don't set Content-Type, let browser set it with boundary
+                    ...options.headers,
+                },
+            };
+
+            // Remove Content-Type header to let browser set it with boundary
+            delete fetchOptions.headers['Content-Type'];
+
+            const response = await fetch(`${API_BASE}${url}`, fetchOptions);
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(result.message || `API Error: ${response.statusText}`);
+            }
+
+            return result;
+        } catch (error) {
+            console.error(`❌ API ${method.toUpperCase()} ${url} failed:`, error);
+            throw error;
+        }
+    }
+
     // ==============================
     // CRUD METHODS (Recipes)
     // ==============================
@@ -50,10 +101,34 @@ class ApiClient {
     }
 
     createRecipe(data) {
+        // Check if data contains a File object (image upload)
+        if (data instanceof FormData || (data.image && data.image instanceof File)) {
+            return this.requestFormData('post', '/recipes', data);
+        }
         return this.request('post', '/recipes', data);
     }
 
     updateRecipe(id, data) {
+        // Check if data contains a File object (image upload)
+        if (data instanceof FormData || (data.image && data.image instanceof File)) {
+            // Use POST with _method=PUT for Laravel to handle FormData properly
+            const formData = data instanceof FormData ? data : new FormData();
+            if (!(data instanceof FormData)) {
+                for (const key in data) {
+                    if (data[key] instanceof File) {
+                        formData.append(key, data[key]);
+                    } else if (data[key] !== null && data[key] !== undefined) {
+                        if (Array.isArray(data[key]) || typeof data[key] === 'object') {
+                            formData.append(key, JSON.stringify(data[key]));
+                        } else {
+                            formData.append(key, data[key]);
+                        }
+                    }
+                }
+            }
+            formData.append('_method', 'PUT');
+            return this.requestFormData('post', `/recipes/${id}`, formData);
+        }
         return this.request('put', `/recipes/${id}`, data);
     }
 

@@ -95,9 +95,17 @@
                 <template x-for="recipe in getFilteredRecipes()" :key="recipe.id">
                     <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
                          @click="addToOrder(recipe)">
-                        <!-- Recipe Image Placeholder -->
-                        <div class="w-full h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-3 flex items-center justify-center">
-                            <i class="fas fa-utensils text-3xl text-gray-400 group-hover:text-primary transition-colors"></i>
+                        <!-- Recipe Image -->
+                        <div class="w-full h-32 rounded-lg mb-3 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+                            <template x-if="recipe.image">
+                                <img :src="recipe.image.startsWith('http') || recipe.image.startsWith('/') ? recipe.image : '/' + recipe.image" 
+                                     :alt="recipe.name"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                     @@error="$el.style.display='none';">
+                            </template>
+                            <div x-show="!recipe.image" class="w-full h-full flex items-center justify-center absolute inset-0">
+                                <i class="fas fa-utensils text-3xl text-gray-400 group-hover:text-primary transition-colors"></i>
+                            </div>
                         </div>
 
                         <!-- Recipe Info -->
