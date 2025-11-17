@@ -8,7 +8,7 @@ export const createOrdersModule = () => ({
     addToOrder(recipe) {
         // Check if item already exists in order
         const existingItem = this.currentOrder.items.find(item => item.id === recipe.id);
-        
+
         if (existingItem) {
             existingItem.quantity++;
         } else {
@@ -19,7 +19,7 @@ export const createOrdersModule = () => ({
                 quantity: 1
             });
         }
-        
+
         this.calculateOrderTotals();
     },
 
@@ -60,12 +60,12 @@ export const createOrdersModule = () => ({
             status: 'draft',
             type: this.orderType
         };
-        
+
         // Save to localStorage
         const drafts = JSON.parse(localStorage.getItem('restaurant_order_drafts') || '[]');
         drafts.push(draft);
         localStorage.setItem('restaurant_order_drafts', JSON.stringify(drafts));
-        
+
         alert('Order saved as draft successfully!');
     },
 
@@ -82,9 +82,9 @@ export const createOrdersModule = () => ({
             ? (this.settings?.deliveryFee ?? this.settings?.delivery_fee ?? 0)
             : 0;
 
-        // Subtotal already includes VAT; do not add tax again
-        this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.deliveryFee;
-        
+        // Total includes subtotal + VAT + delivery fee
+        this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.tax + this.currentOrder.deliveryFee;
+
         // Recalculate change given when total changes
         if (this.currentOrder.cashReceived !== undefined) {
             this.currentOrder.changeGiven = Math.max(0, (this.currentOrder.cashReceived || 0) - this.currentOrder.total);
@@ -105,11 +105,11 @@ export const createOrdersModule = () => ({
             };
 
             const response = await api.createOrder(orderData);
-            
+
             if (response.success) {
                 const newOrder = response.data;
                 this.orders.push(newOrder);
-                
+
                 // Update table status if dine-in
                 if (this.orderType === 'dine-in' && this.currentOrder.tableNumber) {
                     const table = this.tables.find(t => t.number === this.currentOrder.tableNumber);
@@ -118,23 +118,29 @@ export const createOrdersModule = () => ({
                         localStorage.setItem('restaurant_tables', JSON.stringify(this.tables));
                     }
                 }
-                
+
                 // Play sound for new order
                 this.playKdsSound();
-                
+
                 // Show notification
                 this.showKdsNotification(newOrder);
-                
+
                 // Generate receipt with payment info from current order
+                // Use currentOrder values to ensure correct VAT calculation
                 const receiptOrder = {
                     ...newOrder,
+                    items: this.currentOrder.items,
+                    subtotal: this.currentOrder.subtotal || 0,
+                    tax: this.currentOrder.tax || 0,
+                    deliveryFee: this.currentOrder.deliveryFee || 0,
+                    total: this.currentOrder.total || 0,
                     cashReceived: this.currentOrder.cashReceived || 0,
-                    changeGiven: ((this.currentOrder.cashReceived || 0) - this.currentOrder.total) >= 0 
-                        ? ((this.currentOrder.cashReceived || 0) - this.currentOrder.total) 
+                    changeGiven: ((this.currentOrder.cashReceived || 0) - this.currentOrder.total) >= 0
+                        ? ((this.currentOrder.cashReceived || 0) - this.currentOrder.total)
                         : 0
                 };
                 this.generateReceipt(receiptOrder);
-                
+
                 // Reset current order
                 this.currentOrder = {
                     items: [],
@@ -146,7 +152,7 @@ export const createOrdersModule = () => ({
                     cashReceived: 0,
                     changeGiven: 0
                 };
-                
+
                 // Switch to KDS view
                 this.currentTab = 'kds';
             } else {
@@ -193,27 +199,27 @@ export const createOrdersModule = () => ({
     // Enhanced KDS Functions
     getFilteredOrders() {
         const orders = Array.isArray(this.orders) ? this.orders : [];
-        let filteredOrders = orders.filter(order => 
+        let filteredOrders = orders.filter(order =>
             ['new', 'preparing', 'ready'].includes(order.status)
         );
-        
+
         // Apply filter
         if (this.kdsFilter !== 'all') {
             filteredOrders = filteredOrders.filter(order => order.type === this.kdsFilter);
         }
-        
+
         // Apply view filter
         if (this.kdsView !== 'all') {
             filteredOrders = filteredOrders.filter(order => order.status === this.kdsView);
         }
-        
+
         // Station filter
         if (this.kdsStationFilter && this.kdsStationFilter !== 'all') {
             filteredOrders = filteredOrders.filter(order => order.assignedStation === this.kdsStationFilter);
         }
-        
+
         // Apply sorting
-        switch(this.kdsSort) {
+        switch (this.kdsSort) {
             case 'time':
                 filteredOrders.sort((a, b) => a.timestamp - b.timestamp);
                 break;
@@ -224,28 +230,28 @@ export const createOrdersModule = () => ({
                 filteredOrders.sort((a, b) => (a.tableNumber || 0) - (b.tableNumber || 0));
                 break;
         }
-        
+
         return filteredOrders;
     },
 
     getOrderPriority(order) {
         const age = Date.now() - order.timestamp;
         const ageMinutes = age / (1000 * 60);
-        
+
         // Priority based on order age and type
         let priority = 1;
-        
+
         if (ageMinutes > 30) priority = 5; // Very urgent
         else if (ageMinutes > 20) priority = 4; // Urgent
         else if (ageMinutes > 15) priority = 3; // High
         else if (ageMinutes > 10) priority = 2; // Medium
-        
+
         // Boost priority for delivery orders
         if (order.type === 'delivery') priority += 1;
-        
+
         // Boost priority for large orders
         if (order.items.length > 5) priority += 1;
-        
+
         return priority;
     },
 
@@ -267,7 +273,7 @@ export const createOrdersModule = () => ({
     getOrderStatusColor(order) {
         const age = this.getOrderAge(order);
         const priority = this.getOrderPriority(order);
-        
+
         if (priority >= 5 || age.minutes > 30) return 'bg-red-100 text-red-800 border-red-300';
         if (priority >= 4 || age.minutes > 20) return 'bg-orange-100 text-orange-800 border-orange-300';
         if (priority >= 3 || age.minutes > 15) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
@@ -308,7 +314,7 @@ export const createOrdersModule = () => ({
     getPrepTimeStatus(order) {
         const age = this.getOrderAge(order);
         const estimated = this.getEstimatedPrepTime(order);
-        
+
         if (age.minutes > estimated + 5) return 'overdue';
         if (age.minutes > estimated) return 'late';
         if (age.minutes < estimated - 5) return 'early';
@@ -321,7 +327,7 @@ export const createOrdersModule = () => ({
                 assigned_chef: chefName,
                 assigned_station: station
             });
-            
+
             if (response.success) {
                 const order = this.orders.find(o => o.id === orderId);
                 if (order) {
@@ -357,10 +363,10 @@ export const createOrdersModule = () => ({
             const today = new Date().toDateString();
             return orderDate === today;
         });
-        
+
         const completedOrders = todayOrders.filter(order => order.status === 'completed');
         const pendingOrders = todayOrders.filter(order => ['new', 'preparing', 'ready'].includes(order.status));
-        
+
         // Calculate average prep time for completed orders
         let avgPrepTime = 0;
         if (completedOrders.length > 0) {
@@ -373,7 +379,7 @@ export const createOrdersModule = () => ({
             }, 0);
             avgPrepTime = totalPrepTime / completedOrders.length;
         }
-        
+
         // Calculate efficiency based on on-time completion
         let efficiency = 0;
         if (completedOrders.length > 0) {
@@ -387,7 +393,7 @@ export const createOrdersModule = () => ({
             });
             efficiency = (onTimeOrders.length / completedOrders.length) * 100;
         }
-        
+
         return {
             totalOrders: todayOrders.length,
             completedOrders: completedOrders.length,
@@ -444,7 +450,7 @@ export const createOrdersModule = () => ({
     getOrderPrepProgress(orderId) {
         const order = (this.orders || []).find(o => o.id === orderId);
         if (!order) return 0;
-        
+
         const age = Date.now() - order.timestamp;
         const estimated = this.getEstimatedPrepTime(order) * 60 * 1000; // Convert to milliseconds
         const progress = (age / estimated) * 100;
@@ -458,16 +464,16 @@ export const createOrdersModule = () => ({
             const today = new Date().toDateString();
             return orderDate === today;
         });
-        
+
         const completedOrders = todayOrders.filter(order => order.status === 'completed');
         const onTimeOrders = completedOrders.filter(order => {
-            const prepTime = order.completedTime ? 
+            const prepTime = order.completedTime ?
                 (order.completedTime - order.timestamp) / (1000 * 60) : 0;
             const estimated = this.getEstimatedPrepTime(order);
             return prepTime <= estimated;
         });
-        
-        return completedOrders.length > 0 ? 
+
+        return completedOrders.length > 0 ?
             Math.round((onTimeOrders.length / completedOrders.length) * 100) : 0;
     },
 
@@ -492,10 +498,13 @@ export const createOrdersModule = () => ({
 
     // Receipt generation
     generateReceipt(order) {
-        // Calculate change given
-        const orderTotal = (order.subtotal || 0) + (order.tax || 0) + (order.deliveryFee || 0);
+        // Calculate totals including VAT
+        const orderSubtotal = order.subtotal || 0;
+        const orderTax = order.tax || 0;
+        const orderDeliveryFee = order.deliveryFee || 0;
+        const orderTotal = orderSubtotal + orderTax + orderDeliveryFee;
         const changeGiven = (order.cashReceived || 0) - orderTotal;
-        
+
         this.currentReceipt = {
             ...order,
             receiptNumber: 'R' + Date.now(),
@@ -503,10 +512,13 @@ export const createOrdersModule = () => ({
             printTime: new Date().toLocaleTimeString(),
             server: 'Server 1',
             cashReceived: order.cashReceived || 0,
-            changeGiven: changeGiven >= 0 ? changeGiven : 0
+            changeGiven: changeGiven >= 0 ? changeGiven : 0,
+            subtotal: orderSubtotal,
+            tax: orderTax,
+            total: orderTotal
         };
         this.showReceipt = true;
-        
+
         if (this.settings.autoPrint) {
             setTimeout(() => this.printReceipt(), 500);
         }
@@ -515,7 +527,7 @@ export const createOrdersModule = () => ({
     printReceipt() {
         const printWindow = window.open('', '_blank');
         const receiptContent = this.generateReceiptHTML();
-        
+
         printWindow.document.write(`
             <!DOCTYPE html>
             <html>
@@ -535,15 +547,25 @@ export const createOrdersModule = () => ({
                     .title { font-size: 16pt; font-weight: bold; margin: 5px 0; }
                     .info { font-size: 10pt; margin: 2px 0; }
                     .divider { border-top: 1px dashed #000; margin: 10px 0; }
-                    .items { text-align: left; margin: 10px 0; }
-                    .item { margin: 3px 0; }
-                    .item-name { float: left; }
-                    .item-qty { float: left; margin: 0 10px; }
-                    .item-price { float: right; }
-                    .clear { clear: both; }
-                    .totals { text-align: right; margin: 10px 0; }
-                    .total-line { margin: 2px 0; }
-                    .grand-total { font-weight: bold; font-size: 14pt; }
+                    .items-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                    .items-table th { text-align: left; padding: 5px 0; border-bottom: 1px solid #000; font-weight: bold; }
+                    .items-table td { padding: 3px 0; border-bottom: 1px dashed #ccc; }
+                    .items-table .qty { width: 10%; text-align: left; }
+                    .items-table .item-desc { width: 60%; text-align: left; }
+                    .items-table .unit-price { width: 30%; text-align: right; }
+                    .totals { margin: 10px 0; }
+                    .totals-table { width: 100%; border-collapse: collapse; }
+                    .totals-table td { padding: 3px 0; }
+                    .totals-table .description { text-align: left; }
+                    .totals-table .amount { text-align: right; }
+                    .total-line { font-weight: bold; }
+                    .grand-total { font-weight: bold; font-size: 14pt; border-top: 1px solid #000; padding-top: 5px; }
+                    .payment-section { margin-top: 15px; }
+                    .payment-title { font-weight: bold; margin: 10px 0 5px 0; }
+                    .payment-table { width: 100%; border-collapse: collapse; }
+                    .payment-table td { padding: 3px 0; }
+                    .payment-table .description { text-align: left; }
+                    .payment-table .amount { text-align: right; }
                     .footer { margin-top: 15px; font-size: 10pt; }
                     @media print {
                         body { width: 100%; }
@@ -555,7 +577,7 @@ export const createOrdersModule = () => ({
             </body>
             </html>
         `);
-        
+
         printWindow.document.close();
         printWindow.focus();
         printWindow.print();
@@ -567,9 +589,9 @@ export const createOrdersModule = () => ({
         if (!receipt) {
             return '<div class="receipt">No receipt data available</div>';
         }
-        
+
         let html = '<div class="receipt">';
-        
+
         // Header
         if (this.settings.printHeader) {
             if (this.settings.printLogo && this.settings.logo) {
@@ -581,7 +603,7 @@ export const createOrdersModule = () => ({
             html += `<div class="info">${this.settings.email || ''}</div>`;
             html += '<div class="divider"></div>';
         }
-        
+
         // Receipt Info
         html += `<div class="info">${this.translations.receiptNumber || 'Receipt #'} ${receipt.receiptNumber || 'N/A'}</div>`;
         html += `<div class="info">${this.translations.date || 'Date'}: ${receipt.printDate || new Date().toLocaleDateString()}</div>`;
@@ -591,56 +613,84 @@ export const createOrdersModule = () => ({
         }
         html += `<div class="info">${this.translations.orderType || 'Order Type'}: ${this.translations[receipt.type] || receipt.type}</div>`;
         html += '<div class="divider"></div>';
-        
-        // Items
-        html += '<div class="items">';
+
+        // Items Table
+        html += '<table class="items-table">';
+        html += '<thead><tr>';
+        html += '<th class="qty">Qty</th>';
+        html += '<th class="item-desc">Item Description</th>';
+        html += '<th class="unit-price">Unit Price</th>';
+        html += '</tr></thead>';
+        html += '<tbody>';
         if (receipt.items && Array.isArray(receipt.items)) {
             receipt.items.forEach(item => {
-                html += `
-                    <div class="item">
-                        <div class="item-name">${item.name || 'Unknown Item'}</div>
-                        <div class="item-qty">${item.quantity || 0}</div>
-                        <div class="item-price">${this.formatPrice((item.price || 0) * (item.quantity || 0))}</div>
-                        <div class="clear"></div>
-                    </div>
-                `;
+                html += '<tr>';
+                html += `<td class="qty">${item.quantity || 0}</td>`;
+                html += `<td class="item-desc">${item.name || 'Unknown Item'}</td>`;
+                html += `<td class="unit-price">${this.formatPrice(item.price || 0)}</td>`;
+                html += '</tr>';
             });
         }
-        html += '</div>';
-        
-        html += '<div class="divider"></div>';
-        
-        // Totals
-        html += '<div class="totals">';
-        const receiptSubtotal = receipt.subtotal ?? 0;
-        const receiptDeliveryFee = receipt.deliveryFee ?? 0;
-        const displayGrandTotal = receiptSubtotal + receiptDeliveryFee;
+        html += '</tbody>';
+        html += '</table>';
 
-        html += `<div class="total-line">${this.translations.subtotal || 'Subtotal'}: ${this.formatPrice(receiptSubtotal)}</div>`;
-        const receiptTaxLabel = `${this.translations.tax || 'Tax'} (${(this.settings?.taxRate ?? this.settings?.tax_rate ?? 0)}%)`;
-        html += `<div class="total-line">${receiptTaxLabel}: ${this.formatPrice(receipt.tax || 0)}</div>`;
+        html += '<div class="divider"></div>';
+
+        // Totals Table
+        const receiptSubtotal = receipt.subtotal ?? 0;
+        const receiptTax = receipt.tax ?? 0;
+        const receiptDeliveryFee = receipt.deliveryFee ?? 0;
+        const taxRate = (this.settings?.taxRate ?? this.settings?.tax_rate ?? 0);
+        const displayGrandTotal = receiptSubtotal + receiptTax + receiptDeliveryFee;
+
+        html += '<div class="totals">';
+        html += '<table class="totals-table">';
+        html += '<tr>';
+        html += `<td class="description">${this.translations.subtotal || 'Subtotal'}</td>`;
+        html += `<td class="amount">${this.formatPrice(receiptSubtotal)}</td>`;
+        html += '</tr>';
+        html += '<tr>';
+        html += `<td class="description">${this.translations.tax || 'VAT'} (${taxRate}%)</td>`;
+        html += `<td class="amount">${this.formatPrice(receiptTax)}</td>`;
+        html += '</tr>';
         if (receiptDeliveryFee > 0) {
-            html += `<div class="total-line">${this.translations.deliveryFee || 'Delivery Fee'}: ${this.formatPrice(receiptDeliveryFee)}</div>`;
+            html += '<tr>';
+            html += `<td class="description">${this.translations.deliveryFee || 'Delivery Fee'}</td>`;
+            html += `<td class="amount">${this.formatPrice(receiptDeliveryFee)}</td>`;
+            html += '</tr>';
         }
-        html += `<div class="total-line grand-total">${this.translations.grandTotal || 'Grand Total'}: ${this.formatPrice(displayGrandTotal)}</div>`;
+        html += '<tr class="grand-total">';
+        html += `<td class="description">${this.translations.total || 'TOTAL'}</td>`;
+        html += `<td class="amount">${this.formatPrice(displayGrandTotal)}</td>`;
+        html += '</tr>';
+        html += '</table>';
         html += '</div>';
-        
+
         // Payment Info
-        if (receipt.cashReceived || receipt.cashReceived === 0) {
+        if (receipt.cashReceived !== undefined && receipt.cashReceived !== null) {
             html += '<div class="divider"></div>';
-            html += '<div class="totals">';
-            html += `<div class="total-line">Cash Received: ${this.formatPrice(receipt.cashReceived || 0)}</div>`;
+            html += '<div class="payment-section">';
+            html += '<div class="payment-title">PAYMENT INFORMATION — CASH ONLY</div>';
+            html += '<table class="payment-table">';
+            html += '<tr>';
+            html += '<td class="description">Cash Received</td>';
+            html += `<td class="amount">${this.formatPrice(receipt.cashReceived || 0)}</td>`;
+            html += '</tr>';
             const changeGiven = (receipt.cashReceived || 0) - displayGrandTotal;
-            html += `<div class="total-line">Change Given: ${this.formatPrice(changeGiven >= 0 ? changeGiven : 0)}</div>`;
+            html += '<tr>';
+            html += '<td class="description">Change Given</td>';
+            html += `<td class="amount">${this.formatPrice(changeGiven >= 0 ? changeGiven : 0)}</td>`;
+            html += '</tr>';
+            html += '</table>';
             html += '</div>';
         }
-        
+
         // Footer
         if (this.settings.printFooter) {
             html += '<div class="divider"></div>';
             html += `<div class="footer">${this.settings.receiptFooter || 'Thank you for your business!'}</div>`;
         }
-        
+
         html += '</div>';
         return html;
     }

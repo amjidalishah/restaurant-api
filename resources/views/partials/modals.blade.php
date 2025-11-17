@@ -128,6 +128,34 @@
             
             <div class="receipt-preview mb-4 p-4 border rounded-lg bg-gray-50" 
                  style="font-family: 'Courier New', monospace; font-size: 12px;">
+                <style>
+                    .receipt-preview .receipt { text-align: center; }
+                    .receipt-preview .header { margin-bottom: 10px; }
+                    .receipt-preview .logo { max-width: 60px; max-height: 60px; margin: 0 auto 10px; }
+                    .receipt-preview .title { font-size: 16pt; font-weight: bold; margin: 5px 0; }
+                    .receipt-preview .info { font-size: 10pt; margin: 2px 0; }
+                    .receipt-preview .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                    .receipt-preview .items-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                    .receipt-preview .items-table th { text-align: left; padding: 5px 0; border-bottom: 1px solid #000; font-weight: bold; }
+                    .receipt-preview .items-table td { padding: 3px 0; border-bottom: 1px dashed #ccc; }
+                    .receipt-preview .items-table .qty { width: 10%; text-align: left; }
+                    .receipt-preview .items-table .item-desc { width: 60%; text-align: left; }
+                    .receipt-preview .items-table .unit-price { width: 30%; text-align: right; }
+                    .receipt-preview .totals { margin: 10px 0; }
+                    .receipt-preview .totals-table { width: 100%; border-collapse: collapse; }
+                    .receipt-preview .totals-table td { padding: 3px 0; }
+                    .receipt-preview .totals-table .description { text-align: left; }
+                    .receipt-preview .totals-table .amount { text-align: right; }
+                    .receipt-preview .total-line { font-weight: bold; }
+                    .receipt-preview .grand-total { font-weight: bold; font-size: 14pt; border-top: 1px solid #000; padding-top: 5px; }
+                    .receipt-preview .payment-section { margin-top: 15px; }
+                    .receipt-preview .payment-title { font-weight: bold; margin: 10px 0 5px 0; }
+                    .receipt-preview .payment-table { width: 100%; border-collapse: collapse; }
+                    .receipt-preview .payment-table td { padding: 3px 0; }
+                    .receipt-preview .payment-table .description { text-align: left; }
+                    .receipt-preview .payment-table .amount { text-align: right; }
+                    .receipt-preview .footer { margin-top: 15px; font-size: 10pt; }
+                </style>
                 <div x-html="generateReceiptHTML()"></div>
             </div>
             
