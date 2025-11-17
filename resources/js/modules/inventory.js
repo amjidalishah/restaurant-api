@@ -10,6 +10,7 @@ export const createInventoryModule = (state) => ({
     purchases: [],
     waste: [],
     inventoryAlerts: [],
+    expiringItemsAlerts: [],
     inventoryReport: {
         totalItems: 0,
         totalValue: 0,
@@ -178,6 +179,7 @@ export const createInventoryModule = (state) => ({
         try {
             // Alerts
             await this.updateInventoryAlerts();
+            await this.updateExpiringItemsAlerts();
         } catch (error) {
             console.error('Error updating inventory alerts:', error);
         }
@@ -578,6 +580,26 @@ export const createInventoryModule = (state) => ({
             this.inventoryAlerts = this.inventory.filter(item =>
                 (item.currentStock ?? 0) <= (item.minStock ?? 0)
             );
+        }
+    },
+    
+    async updateExpiringItemsAlerts() {
+        try {
+            const expiringRes = await api.request('get', '/inventory/alerts/expiring?days=30');
+            const expiringItems = expiringRes.success ? (expiringRes.data.data || expiringRes.data || []) : [];
+            this.expiringItemsAlerts = Array.isArray(expiringItems)
+                ? expiringItems.map(item => this.normalizeInventoryItem(item))
+                : [];
+        } catch (error) {
+            console.error('Error updating expiring items alerts:', error);
+            // Fallback to local calculation
+            const today = new Date();
+            const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+            this.expiringItemsAlerts = this.inventory.filter(item => {
+                if (!item.expiryDate) return false;
+                const expiryDate = new Date(item.expiryDate);
+                return expiryDate <= thirtyDaysFromNow && expiryDate >= today;
+            });
         }
     },
     
@@ -1067,6 +1089,7 @@ export const createInventoryModule = (state) => ({
     async initInventory() {
         await this.loadInventory();
         await this.updateInventoryAlerts();
+        await this.updateExpiringItemsAlerts();
     },
     
     // Load inventory when tab is accessed

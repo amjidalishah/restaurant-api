@@ -39,22 +39,52 @@
             </div>
             
             <!-- Inventory Alerts -->
-            <div x-show="inventoryAlerts.length > 0" class="mb-6">
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h3 class="text-lg font-bold text-red-800 mb-2">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        Low Stock Alerts
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        <template x-for="item in inventoryAlerts" :key="item.id">
-                            <div class="bg-white border border-red-200 rounded p-2">
-                                <div class="font-medium text-red-800" x-text="item.name"></div>
-                                <div class="text-sm text-red-600">
-                                    <span x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></span>
-                                    <span x-text="' | Min: ' + item.minStock + ' ' + item.unit"></span>
+            <div class="mb-6 space-y-4">
+                <!-- Low Stock Alerts -->
+                <div x-show="inventoryAlerts.length > 0">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h3 class="text-lg font-bold text-red-800 mb-2">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Low Stock Alerts
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <template x-for="item in inventoryAlerts" :key="item.id">
+                                <div class="bg-white border border-red-200 rounded p-2">
+                                    <div class="font-medium text-red-800" x-text="item.name"></div>
+                                    <div class="text-sm text-red-600">
+                                        <span x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></span>
+                                        <span x-text="' | Min: ' + item.minStock + ' ' + item.unit"></span>
+                                    </div>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expiring Items Alerts -->
+                <div x-show="expiringItemsAlerts.length > 0">
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <h3 class="text-lg font-bold text-orange-800 mb-2">
+                            <i class="fas fa-clock mr-2"></i>
+                            Expiring Products Alerts
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <template x-for="item in expiringItemsAlerts" :key="item.id">
+                                <div class="bg-white border border-orange-200 rounded p-2">
+                                    <div class="font-medium text-orange-800" x-text="item.name"></div>
+                                    <div class="text-sm text-orange-600">
+                                        <div>
+                                            <span x-text="'Expires: ' + (item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A')"></span>
+                                            <template x-if="item.expiryDate">
+                                                <span x-text="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) >= 0 ? ' (' + Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) + ' days)' : ' (Expired)'"
+                                                      :class="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) <= 7 ? 'text-red-600 font-bold' : 'text-orange-600'"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-orange-500 mt-1" x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></div>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
