@@ -50,10 +50,19 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                             <template x-for="item in inventoryAlerts" :key="item.id">
                                 <div class="bg-white border border-red-200 rounded p-2">
-                                    <div class="font-medium text-red-800" x-text="item.name"></div>
-                                    <div class="text-sm text-red-600">
-                                        <span x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></span>
-                                        <span x-text="' | Min: ' + item.minStock + ' ' + item.unit"></span>
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex-1">
+                                            <div class="font-medium text-red-800" x-text="item.name"></div>
+                                            <div class="text-sm text-red-600">
+                                                <span x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></span>
+                                                <span x-text="' | Min: ' + item.minStock + ' ' + item.unit"></span>
+                                            </div>
+                                        </div>
+                                        <button @click="addPurchaseFromAlert(item)"
+                                                class="ml-2 px-2 py-1 bg-primary text-white text-xs rounded hover:bg-teal-700 transition"
+                                                title="Create Purchase">
+                                            <i class="fas fa-shopping-cart"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </template>
@@ -71,17 +80,26 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                             <template x-for="item in expiringItemsAlerts" :key="item.id">
                                 <div class="bg-white border border-orange-200 rounded p-2">
-                                    <div class="font-medium text-orange-800" x-text="item.name"></div>
-                                    <div class="text-sm text-orange-600">
-                                        <div>
-                                            <span x-text="'Expires: ' + (item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A')"></span>
-                                            <template x-if="item.expiryDate">
-                                                <span x-text="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) >= 0 ? ' (' + Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) + ' days)' : ' (Expired)'"
-                                                      :class="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) <= 7 ? 'text-red-600 font-bold' : 'text-orange-600'"></span>
-                                            </template>
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="flex-1">
+                                            <div class="font-medium text-orange-800" x-text="item.name"></div>
+                                            <div class="text-sm text-orange-600">
+                                                <div>
+                                                    <span x-text="'Expires: ' + (item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'N/A')"></span>
+                                                    <template x-if="item.expiryDate">
+                                                        <span x-text="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) >= 0 ? ' (' + Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) + ' days)' : ' (Expired)'"
+                                                              :class="Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) <= 7 ? 'text-red-600 font-bold' : 'text-orange-600'"></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                            <div class="text-xs text-orange-500 mt-1" x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></div>
                                         </div>
+                                        <button @click="addPurchaseFromAlert(item)"
+                                                class="ml-2 px-2 py-1 bg-primary text-white text-xs rounded hover:bg-teal-700 transition"
+                                                title="Create Purchase">
+                                            <i class="fas fa-shopping-cart"></i>
+                                        </button>
                                     </div>
-                                    <div class="text-xs text-orange-500 mt-1" x-text="'Stock: ' + item.currentStock + ' ' + item.unit"></div>
                                 </div>
                             </template>
                         </div>

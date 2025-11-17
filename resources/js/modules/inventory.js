@@ -414,12 +414,27 @@ export const createInventoryModule = (state) => ({
     
     async savePurchase() {
         try {
+            // Convert camelCase to snake_case for backend
+            const purchaseData = {
+                ...this.purchaseForm,
+                supplier_id: this.purchaseForm.supplier_id || this.purchaseForm.supplierId || null,
+                order_date: this.purchaseForm.order_date || this.purchaseForm.orderDate || this.purchaseForm.purchaseDate,
+                expected_delivery: this.purchaseForm.expected_delivery || this.purchaseForm.expectedDelivery,
+                items: this.purchaseForm.items.map(item => ({
+                    inventory_id: item.inventoryId || item.inventory_id,
+                    quantity: item.quantity || 0,
+                    unit_cost: item.unit_cost || item.unitCost || 0,
+                    notes: item.notes || '',
+                    expiry_date: item.expiry_date || item.expiryDate || null
+                }))
+            };
+            
             if (this.editingPurchase && this.purchaseForm.id) {
                 // Update
-                await api.request('put', `/purchases/${this.purchaseForm.id}`, this.purchaseForm);
+                await api.request('put', `/purchases/${this.purchaseForm.id}`, purchaseData);
             } else {
                 // Create
-                await api.request('post', '/purchases', this.purchaseForm);
+                await api.request('post', '/purchases', purchaseData);
             }
             
             this.showPurchaseForm = false;
@@ -463,11 +478,44 @@ export const createInventoryModule = (state) => ({
     
     addPurchaseItem() {
         this.purchaseForm.items.push({
-            inventory_id: '',
+            inventoryId: '',
+            name: '',
             quantity: 0,
+            unit: '',
             unit_cost: 0,
             notes: ''
         });
+    },
+    
+    // Add purchase item from alert
+    async addPurchaseFromAlert(inventoryItem) {
+        // Switch to purchase tab
+        this.inventoryTab = 'purchases';
+        
+        // Ensure inventory is loaded for the dropdown
+        if (this.inventory.length === 0) {
+            await this.loadInventory();
+        }
+        
+        // Reset purchase form if not editing
+        if (!this.editingPurchase) {
+            this.resetPurchaseForm();
+        }
+        
+        // Add the item to purchase form with inventoryId set to match dropdown
+        this.purchaseForm.items.push({
+            inventoryId: Number(inventoryItem.id), // Ensure it's a number to match option values
+            name: inventoryItem.name || '',
+            quantity: 0,
+            unit: inventoryItem.unit || '',
+            unit_cost: inventoryItem.cost || 0
+        });
+        
+        // Trigger tab change to ensure purchase tab is loaded
+        await this.onInventoryTabChange();
+        
+        // Open purchase form modal
+        this.showPurchaseForm = true;
     },
     
     removePurchaseItem(index) {
