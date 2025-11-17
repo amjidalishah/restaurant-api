@@ -45,7 +45,9 @@ export const createOrdersModule = () => ({
                 tax: 0,
                 total: 0,
                 tableNumber: null,
-                deliveryFee: 0
+                deliveryFee: 0,
+                cashReceived: 0,
+                changeGiven: 0
             };
         }
     },
@@ -82,6 +84,11 @@ export const createOrdersModule = () => ({
 
         // Subtotal already includes VAT; do not add tax again
         this.currentOrder.total = this.currentOrder.subtotal + this.currentOrder.deliveryFee;
+        
+        // Recalculate change given when total changes
+        if (this.currentOrder.cashReceived !== undefined) {
+            this.currentOrder.changeGiven = Math.max(0, (this.currentOrder.cashReceived || 0) - this.currentOrder.total);
+        }
     },
 
     async placeOrder() {
@@ -118,8 +125,15 @@ export const createOrdersModule = () => ({
                 // Show notification
                 this.showKdsNotification(newOrder);
                 
-                // Generate receipt
-                this.generateReceipt(newOrder);
+                // Generate receipt with payment info from current order
+                const receiptOrder = {
+                    ...newOrder,
+                    cashReceived: this.currentOrder.cashReceived || 0,
+                    changeGiven: ((this.currentOrder.cashReceived || 0) - this.currentOrder.total) >= 0 
+                        ? ((this.currentOrder.cashReceived || 0) - this.currentOrder.total) 
+                        : 0
+                };
+                this.generateReceipt(receiptOrder);
                 
                 // Reset current order
                 this.currentOrder = {
@@ -128,7 +142,9 @@ export const createOrdersModule = () => ({
                     tax: 0,
                     total: 0,
                     tableNumber: null,
-                    deliveryFee: 0
+                    deliveryFee: 0,
+                    cashReceived: 0,
+                    changeGiven: 0
                 };
                 
                 // Switch to KDS view
@@ -476,12 +492,18 @@ export const createOrdersModule = () => ({
 
     // Receipt generation
     generateReceipt(order) {
+        // Calculate change given
+        const orderTotal = (order.subtotal || 0) + (order.tax || 0) + (order.deliveryFee || 0);
+        const changeGiven = (order.cashReceived || 0) - orderTotal;
+        
         this.currentReceipt = {
             ...order,
             receiptNumber: 'R' + Date.now(),
             printDate: new Date().toLocaleDateString(),
             printTime: new Date().toLocaleTimeString(),
-            server: 'Server 1'
+            server: 'Server 1',
+            cashReceived: order.cashReceived || 0,
+            changeGiven: changeGiven >= 0 ? changeGiven : 0
         };
         this.showReceipt = true;
         
@@ -602,6 +624,16 @@ export const createOrdersModule = () => ({
         }
         html += `<div class="total-line grand-total">${this.translations.grandTotal || 'Grand Total'}: ${this.formatPrice(displayGrandTotal)}</div>`;
         html += '</div>';
+        
+        // Payment Info
+        if (receipt.cashReceived || receipt.cashReceived === 0) {
+            html += '<div class="divider"></div>';
+            html += '<div class="totals">';
+            html += `<div class="total-line">Cash Received: ${this.formatPrice(receipt.cashReceived || 0)}</div>`;
+            const changeGiven = (receipt.cashReceived || 0) - displayGrandTotal;
+            html += `<div class="total-line">Change Given: ${this.formatPrice(changeGiven >= 0 ? changeGiven : 0)}</div>`;
+            html += '</div>';
+        }
         
         // Footer
         if (this.settings.printFooter) {

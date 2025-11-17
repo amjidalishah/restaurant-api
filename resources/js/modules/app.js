@@ -172,7 +172,9 @@ document.addEventListener('alpine:init', () => {
                                 tax: 0,
                                 total: 0,
                                 tableNumber: null,
-                                deliveryFee: 0
+                                deliveryFee: 0,
+                                cashReceived: 0,
+                                changeGiven: 0
                             };
 
                             this.selectedRecipe = null;

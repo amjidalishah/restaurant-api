@@ -307,6 +307,34 @@
                     </div>
                 </div>
 
+                <!-- Payment Info -->
+                <div class="mt-4 p-3 bg-white rounded-lg border">
+                    <h4 class="font-bold text-sm mb-3">Payment</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cash Received</label>
+                            <input type="number" 
+                                   x-model="currentOrder.cashReceived" 
+                                   @input="const cash = parseFloat($event.target.value) || 0; currentOrder.cashReceived = cash; currentOrder.changeGiven = Math.max(0, cash - (currentOrder.total || 0));"
+                                   step="0.01" 
+                                   min="0"
+                                   placeholder="0.00"
+                                   class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Change Given</label>
+                            <input type="number" 
+                                   :value="Math.max(0, (currentOrder.cashReceived || 0) - (currentOrder.total || 0))"
+                                   readonly
+                                   class="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 font-bold"
+                                   :class="{'text-green-600': (currentOrder.cashReceived || 0) >= (currentOrder.total || 0), 'text-red-600': (currentOrder.cashReceived || 0) < (currentOrder.total || 0)}">
+                            <p class="text-xs text-gray-500 mt-1" x-show="(currentOrder.cashReceived || 0) < (currentOrder.total || 0)">
+                                Insufficient cash received
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="mt-6 space-y-3">
                     <button @click="placeOrder()"
