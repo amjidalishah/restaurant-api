@@ -161,7 +161,28 @@ export const createInventoryModule = (state) => ({
         try {
             // Purchases
             const purRes = await api.request('get', '/purchases');
-            this.purchases = purRes.success ? (purRes.data.data || purRes.data || []) : [];
+            const purchasesData = purRes.success ? (purRes.data.data || purRes.data || []) : [];
+            // Map purchases to normalize property names for frontend
+            this.purchases = purchasesData.map(purchase => ({
+                ...purchase,
+                purchaseNumber: purchase.purchase_number || purchase.purchaseNumber || `PO-${purchase.id}`,
+                purchaseDate: purchase.order_date || purchase.purchaseDate || purchase.purchase_date,
+                orderDate: purchase.order_date || purchase.orderDate || purchase.purchase_date,
+                totalCost: parseFloat(purchase.total_amount || purchase.totalCost || purchase.total_amount || 0),
+                totalAmount: parseFloat(purchase.total_amount || purchase.totalCost || purchase.total_amount || 0),
+                supplierName: purchase.supplier?.name || purchase.supplier_name || purchase.supplier || 'Unknown Supplier',
+                supplier: purchase.supplier || { name: 'Unknown Supplier' },
+                items: (purchase.purchase_items || purchase.items || []).map(item => ({
+                    ...item,
+                    inventoryId: item.inventory_id || item.inventoryId,
+                    inventory: item.inventory || {},
+                    name: item.inventory?.name || item.name || 'Unknown Item',
+                    unit: item.inventory?.unit || item.unit || '',
+                    cost: parseFloat(item.unit_cost || item.cost || item.unitCost || 0),
+                    unitCost: parseFloat(item.unit_cost || item.cost || item.unitCost || 0),
+                    quantity: parseFloat(item.quantity || 0)
+                }))
+            }));
         } catch (error) {
             console.error('Error loading purchases:', error);
             this.purchases = [];
@@ -408,26 +429,71 @@ export const createInventoryModule = (state) => ({
     
     async editPurchase(purchase) {
         this.editingPurchase = purchase;
-        this.purchaseForm = { ...purchase };
+        // Ensure supplier_id is set correctly
+        this.purchaseForm = {
+            ...purchase,
+            id: purchase.id,
+            supplier_id: purchase.supplier_id || purchase.supplier?.id || '',
+            order_date: purchase.order_date || purchase.orderDate || purchase.purchaseDate || new Date().toISOString().split('T')[0],
+            purchaseDate: purchase.purchaseDate || purchase.order_date || purchase.orderDate || new Date().toISOString().split('T')[0],
+            expected_delivery: purchase.expected_delivery || purchase.expectedDelivery || null,
+            expectedDelivery: purchase.expectedDelivery || purchase.expected_delivery || null,
+            totalCost: purchase.totalCost || purchase.totalAmount || 0,
+            status: purchase.status || 'pending',
+            payment_status: purchase.payment_status || 'pending',
+            notes: purchase.notes || '',
+            // Ensure items have inventoryId set
+            items: (purchase.items || purchase.purchase_items || []).map(item => ({
+                ...item,
+                inventoryId: Number(item.inventory_id || item.inventoryId || item.inventory?.id || ''),
+                inventory_id: Number(item.inventory_id || item.inventoryId || item.inventory?.id || ''),
+                name: item.name || item.inventory?.name || '',
+                unit: item.unit || item.inventory?.unit || '',
+                quantity: parseFloat(item.quantity || 0),
+                unit_cost: parseFloat(item.unit_cost || item.cost || item.unitCost || 0),
+                cost: parseFloat(item.unit_cost || item.cost || item.unitCost || 0),
+                notes: item.notes || null,
+                expiry_date: item.expiry_date || item.expiryDate || null
+            }))
+        };
         this.showPurchaseForm = true;
     },
     
     async savePurchase() {
         try {
+            // Validate supplier_id is provided
+            if (!this.purchaseForm.supplier_id) {
+                alert('Please select a supplier');
+                return;
+            }
+            
             // Convert camelCase to snake_case for backend
             const purchaseData = {
-                ...this.purchaseForm,
-                supplier_id: this.purchaseForm.supplier_id || this.purchaseForm.supplierId || null,
-                order_date: this.purchaseForm.order_date || this.purchaseForm.orderDate || this.purchaseForm.purchaseDate,
-                expected_delivery: this.purchaseForm.expected_delivery || this.purchaseForm.expectedDelivery,
+                supplier_id: Number(this.purchaseForm.supplier_id) || null,
+                order_date: this.purchaseForm.order_date || this.purchaseForm.orderDate || this.purchaseForm.purchaseDate || new Date().toISOString().split('T')[0],
+                expected_delivery: this.purchaseForm.expected_delivery || this.purchaseForm.expectedDelivery || null,
+                status: this.purchaseForm.status || 'pending',
+                payment_status: this.purchaseForm.payment_status || 'pending',
+                notes: this.purchaseForm.notes || null,
                 items: this.purchaseForm.items.map(item => ({
-                    inventory_id: item.inventoryId || item.inventory_id,
-                    quantity: item.quantity || 0,
-                    unit_cost: item.unit_cost || item.unitCost || 0,
-                    notes: item.notes || '',
+                    inventory_id: Number(item.inventoryId || item.inventory_id),
+                    quantity: Number(item.quantity || 0),
+                    unit_cost: Number(item.unit_cost || item.unitCost || 0),
+                    notes: item.notes || null,
                     expiry_date: item.expiry_date || item.expiryDate || null
                 }))
             };
+            
+            // Add optional fields if they exist
+            if (this.purchaseForm.shipping_cost !== undefined) {
+                purchaseData.shipping_cost = Number(this.purchaseForm.shipping_cost);
+            }
+            if (this.purchaseForm.tax_amount !== undefined) {
+                purchaseData.tax_amount = Number(this.purchaseForm.tax_amount);
+            }
+            if (this.purchaseForm.discount_amount !== undefined) {
+                purchaseData.discount_amount = Number(this.purchaseForm.discount_amount);
+            }
             
             if (this.editingPurchase && this.purchaseForm.id) {
                 // Update
@@ -443,7 +509,9 @@ export const createInventoryModule = (state) => ({
             await this.loadInventory();
         } catch (error) {
             console.error('Error saving purchase:', error);
-            alert('Error saving purchase. Please try again.');
+            const errorMessage = error.message || (error.response?.data?.message || 'Unknown error');
+            const errorDetails = error.response?.data?.errors ? JSON.stringify(error.response.data.errors) : '';
+            alert('Error saving purchase: ' + errorMessage + (errorDetails ? '\n\n' + errorDetails : ''));
         }
     },
     
@@ -468,11 +536,17 @@ export const createInventoryModule = (state) => ({
     resetPurchaseForm() {
         this.purchaseForm = {
             supplier_id: '',
+            supplierId: '',
             items: [],
             totalCost: 0,
             purchaseDate: new Date().toISOString().split('T')[0],
+            order_date: new Date().toISOString().split('T')[0],
+            orderDate: new Date().toISOString().split('T')[0],
             expectedDelivery: null,
-            notes: ''
+            expected_delivery: null,
+            notes: '',
+            status: 'pending',
+            payment_status: 'pending'
         };
     },
     

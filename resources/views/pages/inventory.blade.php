@@ -303,26 +303,30 @@
                         <div class="bg-gray-50 border rounded-lg p-4">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <div class="font-bold" x-text="'Purchase #' + purchase.id"></div>
-                                    <div class="text-sm text-gray-600" x-text="purchase.supplier"></div>
-                                    <div class="text-sm" x-text="'Date: ' + purchase.purchaseDate"></div>
+                                    <div class="font-bold" x-text="'Purchase ' + (purchase.purchaseNumber || '#' + purchase.id)"></div>
+                                    <div class="text-sm text-gray-600" x-text="purchase.supplierName || (purchase.supplier?.name || 'Unknown Supplier')"></div>
+                                    <div class="text-sm" x-text="'Date: ' + (purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString() : 'N/A')"></div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-bold text-primary" x-text="formatPrice(purchase.totalCost)"></div>
-                                    <div class="px-2 py-1 rounded-full text-xs" 
+                                    <div class="font-bold text-primary" x-text="formatPrice(purchase.totalCost || purchase.totalAmount || 0)"></div>
+                                    <div class="px-2 py-1 rounded-full text-xs mt-1" 
                                          :class="{
                                              'bg-yellow-100 text-yellow-800': purchase.status === 'pending',
-                                             'bg-green-100 text-green-800': purchase.status === 'received'
+                                             'bg-blue-100 text-blue-800': purchase.status === 'ordered',
+                                             'bg-purple-100 text-purple-800': purchase.status === 'shipped',
+                                             'bg-green-100 text-green-800': purchase.status === 'delivered' || purchase.status === 'received',
+                                             'bg-red-100 text-red-800': purchase.status === 'cancelled' || purchase.status === 'returned'
                                          }"
-                                         x-text="translations[purchase.status]"></div>
+                                         x-text="(purchase.status || 'pending').charAt(0).toUpperCase() + (purchase.status || 'pending').slice(1)"></div>
                                 </div>
                             </div>
                             
-                            <div class="border-t pt-3">
-                                <template x-for="item in purchase.items" :key="item.inventoryId">
+                            <div class="border-t pt-3" x-show="purchase.items && purchase.items.length > 0">
+                                <div class="text-xs font-semibold text-gray-600 mb-2">Items:</div>
+                                <template x-for="(item, index) in purchase.items" :key="item.id || index">
                                     <div class="flex justify-between text-sm py-1">
-                                        <span x-text="item.name"></span>
-                                        <span x-text="item.quantity + ' ' + item.unit + ' - ' + formatPrice(item.cost * item.quantity)"></span>
+                                        <span x-text="item.name || item.inventory?.name || 'Unknown Item'"></span>
+                                        <span x-text="(item.quantity || 0) + ' ' + (item.unit || item.inventory?.unit || '') + ' - ' + formatPrice((item.cost || item.unitCost || 0) * (item.quantity || 0))"></span>
                                     </div>
                                 </template>
                             </div>

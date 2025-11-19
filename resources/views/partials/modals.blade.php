@@ -570,8 +570,16 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-sm font-medium mb-1" x-text="translations.supplier"></label>
-                            <input type="text" x-model="purchaseForm.supplier" required
-                                   class="w-full border rounded-lg px-3 py-2">
+                            <select x-model="purchaseForm.supplier_id" required
+                                    class="w-full border rounded-lg px-3 py-2">
+                                <option value="">Select Supplier</option>
+                                <template x-for="supplier in suppliers" :key="supplier.id">
+                                    <option :value="supplier.id" x-text="supplier.name"></option>
+                                </template>
+                            </select>
+                            <p x-show="suppliers.length === 0" class="text-xs text-gray-500 mt-1">
+                                No suppliers available. <a href="#" @click.prevent="addSupplier(); showPurchaseForm = false;" class="text-primary underline">Add a supplier first</a>
+                            </p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1" x-text="translations.purchaseDate"></label>
