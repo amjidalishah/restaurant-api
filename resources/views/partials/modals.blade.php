@@ -591,11 +591,6 @@
                             <input type="date" x-model="purchaseForm.expectedDelivery"
                                    class="w-full border rounded-lg px-3 py-2">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1" x-text="translations.totalCost"></label>
-                            <input type="number" x-model="purchaseForm.totalCost" min="0" step="0.01" required
-                                   class="w-full border rounded-lg px-3 py-2">
-                        </div>
                     </div>
                     
                     <div class="mb-4">
